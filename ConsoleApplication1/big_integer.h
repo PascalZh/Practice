@@ -4,6 +4,8 @@
 /*
 @date:2017/11/5
 */
+#include <iostream>
+using namespace std;
 class BigInteger {
 private:
 	struct _node {
@@ -113,7 +115,7 @@ std::ostream &operator<<(std::ostream &output, const BigInteger & x)
 		tmp = char(p->number + '0') + tmp;
 		p = p->next;
 	}
-	for (int i = 0; i < tmp.size(); i++)output << tmp[i];
+	for (unsigned i = 0; i < tmp.size(); i++)output << tmp[i];
 	return output;
 
 }

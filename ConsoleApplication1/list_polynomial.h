@@ -5,10 +5,10 @@
 */
 #ifndef _LIST_POLYNOMIAL_H
 #define _LIST_POLYNOMIAL_H
-
 #include <iostream>
-
 using namespace std;
+
+
 class Polynomial
 {//I'll show you the way to use this class
     //First, initiating a object like 'Polynomial a;'
