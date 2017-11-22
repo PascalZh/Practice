@@ -1,3 +1,4 @@
+// lastedit: 2017/11/2
 #pragma once
 //#pragma once could substitute #ifndef... , and works better.
 #include <iostream>
@@ -5,7 +6,14 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <queue>
 
+#define MAZE_USE_QUEUE
+/* I wrote two function to solve this problem you could choose which function you want to use,
+through defining a macro-'MAZE_USE_STACK' or 'MAZE_USE_QUEUE'.
+However I prefer the latter.
+*/
+#ifdef MAZE_USE_STACK
 // The graph of the maze is stored in the 2d int array: maze.
 // '1' shows wall, '0' shows route, but '2' indicates where you have visited.
 // a maze array is like this:
@@ -193,7 +201,103 @@ void Maze() {
 	}
 	delete[] maze;
 }
+#endif
+
+#ifdef MAZE_USE_QUEUE
+/*
+Just one important data:map[i][j], used to store the map, like this:
++--------------j
+|
+|
+|
+|
+i
+Wall set to -1(in the maze.txt I use # to present -1), road set to 0(space)
+
+Then we use Dijkstra Algorithm to calculate the shortest path.
+map[i][j] may refer to the lenght of path.
+
+map[1][1] is start point.
+*/
+#define InTheMap top.i > 0 && top.i < row - 1 && top.j>0 && top.j < col - 1
+void Maze()
+{
+	// input maze.txt to the map[i][j]
+	using namespace std;
+	int row = 0, col = 0; // row refer to how many rows map has.
+	ifstream fmaze("maze.txt");
+	string str;
+	while (getline(fmaze, str)) {
+		row++;
+	}
+	col = str.size();
+	int **map = new int *[row];
+	fmaze.close();
+	fmaze.open("maze.txt");
+	for (int i = 0; i < row; i++) {
+		map[i] = new int[col];
+		getline(fmaze, str);
+		for (int j = 0; j < col; j++)
+			map[i][j] = (str[j] == '#' ? -1:0);
+	}
 
 
+	struct node {
+		int i;
+		int j;
+		node(int parai = 0, int paraj = 0) :i(parai), j(paraj) {}
+	};
+	queue<node> path;
+	path.push(node(1, 1));
+	node top;
+	while (!path.empty()) {
+		top = path.front();
+		path.pop();
+		if (InTheMap && map[top.i - 1][top.j] == 0)
+		{
+			path.push(node(top.i - 1, top.j)); 
+			map[top.i - 1][top.j] = map[top.i][top.j] + 1;
+		}
+		if (InTheMap && map[top.i + 1][top.j] == 0)
+		{
+			path.push(node(top.i + 1, top.j));
+			map[top.i + 1][top.j] = map[top.i][top.j] + 1;
+		}
+		if (InTheMap && map[top.i][top.j + 1] == 0)
+		{
+			path.push(node(top.i, top.j + 1));
+			map[top.i][top.j + 1] = map[top.i][top.j] + 1;
+		}
+		if (InTheMap && map[top.i][top.j - 1] == 0)
+		{
+			path.push(node(top.i, top.j - 1));
+			map[top.i][top.j - 1] = map[top.i][top.j] + 1;
+		}
+		//// print map
+		//for (int i = 0; i < row; i++) {
+		//	for (int j = 0; j < col; j++)
+		//		cout << map[i][j]<<"\t";
+		//	cout << endl;
+		//}
+		//cout << endl;
+	}
+	map[1][1] = 0;
+	
+	// print map
+	for (int i = 0; i < row; i++) {
+		for (int j = 0; j < col; j++) {
+			cout.width(3);
+			cout << map[i][j];
+		}
+		cout << endl;
+	}
+	// I fix the start point, however you could choose your
+	// outlet point
+	// Then all you need to do is return back to the start point in the numerical sequence.
+	// for example:
+	// your outlet is marked 23, then you find 22, 21, ...
+	// finally, you will find 0, that's the start point
+}
+#endif
 
 
