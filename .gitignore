@@ -3,3 +3,4 @@
 !*.h
 !*.asm
 !./Assembly/masm/*
+!*.scm
