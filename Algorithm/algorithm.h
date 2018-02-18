@@ -74,7 +74,7 @@ Item items[10]={};
 int BestPlan(int solution[], int rm_vol, Item rm_items[], int count=0)// rm_vol : remained volume(weight) ; rm_items : remained items
 {
     int val1,val2;// val1: put in ; val2: not put in
-    int solu1[],solu2[];
+    int * solu1,* solu2;
     if(count==10)return 0;
     solu1 = new int[10];
     solu2 = new int[10];
@@ -109,27 +109,27 @@ int BestPlan(int solution[], int rm_vol, Item rm_items[], int count=0)// rm_vol 
     }
 }
 // Test code: 
-#include "algorithm.h"
-#include <iostream>
-using namespace std;
-int main()
-{
-    items[0].w=10; items[0].val=3;
-    items[1].w=11; items[1].val=3;
-    items[2].w=12; items[2].val=3;
-    items[3].w=13; items[3].val=3;
-    items[4].w=14; items[4].val=3;
-    items[5].w=15; items[5].val=3;
-    items[6].w=16; items[6].val=3;
-    items[7].w=17; items[7].val=3;
-    items[8].w=18; items[8].val=3;
-    items[9].w=19; items[9].val=3;
-    int solution[10]={0};
-    int max_val=BestPlan(solution, 10, items);
-    cout << "max_val: " << max_value << endl;
-    for ( int i = 0 ; i < 10 ; i++ )
-        cout << solution[i];
-
-    return 0;
-}
-// }}}
+//#include "algorithm.h"
+//#include <iostream>
+//using namespace std;
+//int main()
+//{
+//    items[0].w=10; items[0].val=3;
+//    items[1].w=11; items[1].val=3;
+//    items[2].w=12; items[2].val=3;
+//    items[3].w=13; items[3].val=3;
+//    items[4].w=14; items[4].val=3;
+//    items[5].w=15; items[5].val=3;
+//    items[6].w=16; items[6].val=3;
+//    items[7].w=17; items[7].val=3;
+//    items[8].w=18; items[8].val=3;
+//    items[9].w=19; items[9].val=3;
+//    int solution[10]={0};
+//    int max_val=BestPlan(solution, 10, items);
+//    cout << "max_val: " << max_value << endl;
+//    for ( int i = 0 ; i < 10 ; i++ )
+//        cout << solution[i];
+//
+//    return 0;
+//}
+//// }}}
