@@ -1,0 +1,1 @@
+(define (make-accumulator init))
