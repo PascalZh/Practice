@@ -1,6 +1,10 @@
 *.*
 !*.cpp
+!*.c
 !*.h
 !*.asm
 !./Assembly/masm/*
 !*.scm
+!*.md
+!*.sh
+!Makefile
