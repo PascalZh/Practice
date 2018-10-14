@@ -1,7 +1,13 @@
 #! /usr/bin/env racket
 #lang racket
-(define nil '())
-(define len length)
+
+(provide test)
+(provide make-network)
+(provide train)
+(provide apply-network)
+(provide transpose)
+(provide sigmoid)
+(provide dot-prod)
 ; access list by index
 (define (at l i) (if (equal? i 0) (car l) (at (cdr l) (- i 1))))
 (define (loc l i j) (at (at l i) j))
@@ -13,84 +19,168 @@
 ; 构建网络
 (define (make-network num-of-first . nums)
   (define (make-w number)
-    (define (generate-w) 0)
+    (define generate-w random)
     (define (iter n res)
       (if (= n 0) res (iter (- n 1) (cons (generate-w) res))))
-    (reverse (iter number nil)))
+    (reverse (iter number null)))
   (define (iter nums res)
     (define (iter_ num-of-w num-of-nodes res)
       (if (= num-of-nodes 0)
           res
           (iter_ num-of-w (- num-of-nodes 1) (cons (make-w num-of-w) res))))
-    (if (eq? (cdr nums) nil)
+    (if (eq? (cdr nums) null)
         res
-        (iter (cdr nums) (cons (iter_ (car nums) (cadr nums) nil) res))))
-  (cons 'bp1 (reverse (iter (cons num-of-first nums) nil))))
+        (iter (cdr nums) (cons (iter_ (car nums) (cadr nums) null) res))))
+  (cons 'bp1 (reverse (iter (cons num-of-first nums) null))))
 
 (define (type? obj type)
   (eq? (car obj) type))
 
 ; 神经元的层从左到右从0开始编号，每一层从上到下从0开始编号
 ; 权值记为w由该层编号，神经元编号，上层神经元编号共同确定
-(define (access-w network layer num prev-num)
-  (cond [(type? network 'bp1)
-         (at (loc (cdr network) layer num) prev-num)]))
 
 ; af: activity function
-(define (apply-network input network af)
+(define (apply-network input network #:act-f [af sigmoid])
   (define (iter ntw res)
-    (if (null? (cdr ntw))
+    (if (null? ntw)
         (reverse res)
         (iter (cdr ntw)
               (cons (map af
-                         (map (lambda (l) (dot-prod l res))
+                         (map (lambda (l) (dot-prod l (car res)))
                               (car ntw)))
                     res))))
-  (reverse (iter network (map af input))))
+  (if (not (pair? (car network)))
+      (iter (cdr network ) (list input))
+      (iter network (list input))))
 
 ; alpha指的是学习率
 ; t表示真实值
+; input 应该为二维的训练对象
 (define train
   (lambda (input t network
-           #:alpha [alpha 1]
-           #:activity-func [af sigmoid]
-           #:precision [p 0.01])
+                 #:alpha [alpha 1]
+                 #:act-f [af sigmoid]
+                 #:precision [p 0.000000000001])
     (cond [(type? network 'bp1) (train-bp1 input t (cdr network)
                                            #:alpha alpha
-                                           #:activity-func af
+                                           #:act-f af
                                            #:precision p)])))
 
 ; 根据wikipedia的公式而写
-(define (dot-prod) l1 l2)
+; 输出层应该只有一个neuron
+
 (define (train-bp1 input t network
                    #:alpha a
-                   #:activity-func af
+                   #:act-f af
                    #:precision p)
-  (define (iter o ntw)
-    (define (get-delta o ntw))
-    (define (get-delta-w)
-      (map (lambda (lst)
-             (map (lambda (elem lst-o)
-                    (map (lambda (elem-o)
-                           (* elem elem-o))
-                         lst-o))
-                  lst
-                  o))
-           (get-delta o ntw)))
-    (define (new-network network)
-      (map (lambda (layer d-layer)
-             (map (lambda (lst d-lst)
-                    (map +
-                         lst
-                         d-lst))
-                  layer
-                  d-layer))
-           network
-           (get-delta-w)))
-    (if ((- (caar o) t) . < . p)
+
+  (define (get-delta o-nh t_ ntw-nh) ; -nh represents no head
+      (let ([layer-o (car o-nh)])
+        (if (null? ntw-nh)
+          (cons (map (lambda (elem-o)
+                 (* (- elem-o t_)  ; use sigmoid function
+                    elem-o
+                    (- 1 elem-o)))
+               layer-o)
+               null)
+          (let ([layer-ntw (car ntw-nh)])
+            (cons (map (lambda (elem-o elem-ntw)
+                 (* elem-o
+                    (- 1 elem-o)
+                    (dot-prod
+                      elem-ntw
+                      (first (get-delta (cdr o-nh) t_ (cdr ntw-nh))))))
+               layer-o
+               (transpose layer-ntw))
+                 (get-delta (cdr o-nh) t_ (cdr ntw-nh)))))))
+
+  (define (get-delta-w o t_ ntw)
+    ;(display-n (get-delta (remove-head o) (remove-head ntw)))
+    (map (lambda (lst-delta lst-o)
+           (map (lambda (elem-delta)
+                  (scale (* -1 a elem-delta) lst-o))
+                lst-delta))
+         (get-delta (remove-head o) t_ (remove-head ntw))
+         (remove-tail o)))
+
+  (define (new-network o t_ ntw)
+    (add-network network (get-delta-w o t_ ntw)))
+
+  (define (iter_ i_ t_ ntw)
+    (define (output o_) (car (first (reverse o_))))
+    (let* ([o (apply-network i_ ntw)]
+           [new-ntw (new-network o t_ ntw)]
+           [new-o (apply-network i_ new-ntw)])
+      (if ((abs (- (output o) (output new-o) )) . < . p)
+          ntw
+          (begin
+            (newline)
+            (display "ntw:")
+            (display-n new-ntw)
+            (display "output:")
+            (display-n (output new-o))
+            (newline)
+            (iter_ i_ t_ new-ntw)))))
+
+  (define (iter i_ t_ ntw)
+    (if (null? i_)
         ntw
-        (let ([new-ntw (new-network network)])
-          (iter (apply-network input new-ntw af) new-ntw))))
-  (iter (apply-network input network af) network))
+        (iter (cdr i_) (cdr t_)
+              (iter_ (car i_) (car t_) ntw))))
+
+  (cons 'bp1 (iter input t network)))
 
 (define sigmoid (lambda (z) (/ 1 (+ 1 (exp (- 0 z))))))
+(define (dot-prod l1 l2)
+  (foldl +
+         0
+         (map * l1 l2)))
+(define (transpose lst-2d)
+  (if (null? (car lst-2d))
+      null
+      (cons (map first lst-2d)
+            (transpose (map rest lst-2d)))))
+(define (add-network ntw1 ntw2)
+  (map (lambda (layer d-layer)
+         (map (lambda (lst d-lst)
+                (map +
+                     lst
+                     d-lst))
+              layer
+              d-layer))
+       ntw1
+       ntw2))
+(define (scale k lst)
+  (map (lambda (x) (* k x)) lst))
+(define remove-head cdr)
+(define (remove-tail lst)
+  (reverse (rest (reverse lst))))
+
+(define (test)
+
+  (define ntw (make-network 1 3 1))
+  (display ntw)
+  (newline)
+
+  (define i_ '(0.1
+              0.2
+              0.3
+              0.4
+              0.5
+              0.6
+              0.7
+              0.8
+              0.9
+              ))
+  (define t (map (lambda (x) (* x x)) i_))
+  (define input (map list i_))
+
+  (define ntw-t (train input t ntw))
+
+  (define output (apply-network (list 0.9) ntw-t))
+  (display output)
+  (newline))
+
+(define (display-n obj)
+  (display obj)
+  (newline))
