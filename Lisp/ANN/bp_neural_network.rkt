@@ -2,21 +2,21 @@
 #lang racket
 
 (provide test)
+
 (provide make-network)
-(provide train)
 (provide apply-network)
+(provide train)
+
 (provide transpose)
 (provide sigmoid)
 (provide dot-prod)
-; access list by index
-(define (at l i) (if (equal? i 0) (car l) (at (cdr l) (- i 1))))
-(define (loc l i j) (at (at l i) j))
+(provide scale)
 
 ;; 每个神经元都假定与前一层的全部神经元相连
 ;; 构造出来的网络实际上是权值(w)
 
 ; 以list表示权值
-; 构建网络
+; 构建网络 {{{
 (define (make-network num-of-first . nums)
   (define (make-w number)
     (define generate-w random)
@@ -32,12 +32,15 @@
         res
         (iter (cdr nums) (cons (iter_ (car nums) (cadr nums) null) res))))
   (cons 'bp1 (reverse (iter (cons num-of-first nums) null))))
+; }}}
 
 (define (type? obj type)
   (eq? (car obj) type))
 
+; apply-network {{{
 ; 神经元的层从左到右从0开始编号，每一层从上到下从0开始编号
 ; 权值记为w由该层编号，神经元编号，上层神经元编号共同确定
+; 输入层不会经过激活函数处理
 
 ; af: activity function
 (define (apply-network input network #:act-f [af sigmoid])
@@ -52,25 +55,27 @@
   (if (not (pair? (car network)))
       (iter (cdr network ) (list input))
       (iter network (list input))))
+; }}}
 
 ; alpha指的是学习率
 ; t表示真实值
 ; input 应该为二维的训练对象
 (define train
   (lambda (input t network
-                 #:alpha [alpha 1]
+                 #:learning_rate [alpha 1]
                  #:act-f [af sigmoid]
                  #:precision [p 0.000000000001])
     (cond [(type? network 'bp1) (train-bp1 input t (cdr network)
-                                           #:alpha alpha
+                                           #:learning_rate alpha
                                            #:act-f af
                                            #:precision p)])))
 
+; train {{{
 ; 根据wikipedia的公式而写
 ; 输出层应该只有一个neuron
 
 (define (train-bp1 input t network
-                   #:alpha a
+                   #:learning_rate a
                    #:act-f af
                    #:precision p)
 
@@ -119,6 +124,8 @@
             (display-n new-ntw)
             (display "output:")
             (display-n (output new-o))
+            (display "t")
+            (display-n t_)
             (newline)
             (iter_ i_ t_ new-ntw)))))
 
@@ -129,6 +136,7 @@
               (iter_ (car i_) (car t_) ntw))))
 
   (cons 'bp1 (iter input t network)))
+; }}}
 
 (define sigmoid (lambda (z) (/ 1 (+ 1 (exp (- 0 z))))))
 (define (dot-prod l1 l2)
@@ -158,29 +166,46 @@
 
 (define (test)
 
-  (define ntw (make-network 1 3 1))
+  ;(define ntw (make-network 2 3 1))
+  ;(display ntw)
+  ;(newline)
+
+  ;(define i_ '(0
+  ;0
+  ;0
+  ;0
+  ;0
+  ;0
+  ;0
+  ;0
+  ;0
+  ;))
+  ;(define i1 (map (lambda (x) (random)) i_))
+  ;(define i2 (map (lambda (x) (random)) i_))
+  ;(define input (map (lambda (x1 x2) (list x1 x2)) i1 i2))
+  ;(define t (map (lambda (x1 x2) (sqrt (+ (* x1 x1) (* x2 x2)))) i1 i2))
+
+  (define ntw '(bp1 ((0.2 0.8) (-0.7 -0.5)) ((0.3 0.5))))
+  ;(define ntw (make-network 2 2 1))
   (display ntw)
-  (newline)
+  (define input '((0.3 -0.7)))
+  (define t '(0.1))
 
-  (define i_ '(0.1
-              0.2
-              0.3
-              0.4
-              0.5
-              0.6
-              0.7
-              0.8
-              0.9
-              ))
-  (define t (map (lambda (x) (* x x)) i_))
-  (define input (map list i_))
+  (train input t ntw #:learning_rate 0.6)
 
-  (define ntw-t (train input t ntw))
-
-  (define output (apply-network (list 0.9) ntw-t))
-  (display output)
-  (newline))
+  ;(define output (apply-network (list 0.9 0.1) ntw-t))
+  ;(display output)
+  ;(newline)
+  ;(define output1 (apply-network (list 0.3 0.5) ntw-t))
+  ;(display output1)
+  ;(newline)
+  ;(define output2 (apply-network (list 0.1 0.3) ntw-t))
+  ;(display output2)
+  ;(newline)
+  )
 
 (define (display-n obj)
   (display obj)
   (newline))
+
+(test)
