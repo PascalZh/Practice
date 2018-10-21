@@ -1,3 +1,6 @@
 .build/*
 **/build/*
 sdkconfig*
+*.exe
+/C51/whut_homeworks/LED/*
+!/C51/whut_homeworks/LED/*.c
