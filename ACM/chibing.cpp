@@ -95,11 +95,9 @@ ostream &operator<<(ostream &o, LLL &num)
 		str = to_string(head->d) + str;
 		head = head->next;
 	}
-	cout << str;
+	o << str;
 
 }
-
-
 
 
 LLL rec(int n)
@@ -124,6 +122,7 @@ template<class Iter> void output(Iter begin, Iter end)
 			std::cout << " ";
 	}
 }
+
 int main()
 {
 	int x;
