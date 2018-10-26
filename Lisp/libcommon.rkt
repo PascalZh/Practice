@@ -1,5 +1,5 @@
 #lang racket
-(provide def len)
+(provide def len average)
 
 (define-syntax def
   (syntax-rules ()
@@ -7,3 +7,4 @@
      (define id1 id2 ...)]))
 
 (def len length)
+(def (average lst) (/ (apply + lst) (len lst)))

@@ -2,8 +2,6 @@
 #lang racket
 (require "../libcommon.rkt")
 
-(provide test)
-
 (provide make-network apply-network final-output train)
 (provide ntw-layer ntw-node ntw-w)
 (provide transpose sigmoid dot-prod scale)
@@ -44,23 +42,22 @@
         res
         (iter_ num-of-w (- num-of-nodes 1) (cons (make-w num-of-w) res))))
 
-    (if (eq? (cddr nums) null)
-      (cons (cdar res) (cdr res))
+    (if (eq? (cdr nums) null)
+      res
       (iter (cdr nums)
             (cons
               (let ([layer (map (λ (node)
                                    (let ([sum (apply + node)])
-                                     (cons (random) (map (λ (elem) (/ elem sum)) ; cons (random) 添加偏置
-                                                         node))))
-                                (iter_ (cadr nums) (caddr nums) null))])
-                (cons (repeat 0 (+ 1 (cadr nums)))
-                      layer))
+                                     (map (λ (elem) (/ elem sum)) node)))
+                                (iter_ (car nums) (cadr nums) null))])
+                layer)
               res))))
-  (cons 'bp1 (reverse (iter (cons 'x nums) null))))
-; }}}
+  (cons 'bp1 (reverse (iter nums null))))
 
 (def (type? obj type)
   (eq? (car obj) type))
+; }}}
+
 
 ; apply-network {{{
 ; ReturnValue: 返回的是每个节点的输出值
@@ -75,31 +72,32 @@
       (iter (cdr ntw)
             (cons
               (map af
-                   (map (λ (node) (if (andmap zero? node)
-                                      1
-                                      (dot-prod node (car res))))
+                   (map (λ (node) (dot-prod node (car res)))
                         (car ntw)))
               res))))
   (if (not (pair? (car network)))
-    (iter (cdr network ) (list (map af (cons 1 input))))
-    (iter network (list (map af (cons 1 input))))))
+    (iter (cdr network ) (list (map af input)))
+    (iter network (list (map af input)))))
 
-(def (final-output output)
-  (car (first (reverse output))))
+; }}}
+
+; (final-output o) {{{
+(def (final-output o)
+  (first (reverse o)))
 ; }}}
 
 ; alpha指的是学习率
 ; t表示真实值向量
 ; input 应该为二维的list，即训练对象
 (def train
-  (λ (network input t
-                   #:learning-rate [alpha 0.9]
-                   #:act-f [af sigmoid]
-                   #:precision [p 0.000000000001])
-    (cond [(type? network 'bp1) (train-bp1 input t (cdr network)
-                                           #:learning-rate alpha
-                                           #:act-f af
-                                           #:precision p)])))
+  (λ (input t network
+              #:learning-rate [alpha 0.9]
+              #:act-f [af sigmoid]
+              #:precision [p 0.000000000001])
+     (cond [(type? network 'bp1) (train-bp1 input t (cdr network)
+                                            #:learning-rate alpha
+                                            #:act-f af
+                                            #:precision p)])))
 
 ; train-bp1 {{{
 ; 根据wikipedia的公式而写
@@ -113,20 +111,21 @@
   ; get-delta {{{
   (def (get-delta o-nh t_ ntw-nh) ; -nh represents no head
     (let ([layer-o (car o-nh)])
-      (if (null? ntw-nh)
-        (cons (map (λ (elem-o)
-                     (* (- elem-o t_)  ; use sigmoid function
-                        elem-o
-                        (- 1 elem-o)))
-                   layer-o)
+      (if (null? ntw-nh)                    ; output layer
+        (cons (map (λ (elem-o elem-t)
+                      (* (- elem-o elem-t)  ; use sigmoid function
+                         elem-o
+                         (- 1 elem-o)))
+                   layer-o
+                   t_)
               null)
-        (let ([layer-ntw (car ntw-nh)])
+        (let ([layer-ntw (car ntw-nh)])     ; inner layer
           (cons (map (λ (elem-o elem-ntw)
-                       (* elem-o
-                          (- 1 elem-o)
-                          (dot-prod
-                            elem-ntw
-                            (first (get-delta (cdr o-nh) t_ (cdr ntw-nh))))))
+                        (* elem-o
+                           (- 1 elem-o)
+                           (dot-prod
+                             elem-ntw
+                             (first (get-delta (cdr o-nh) t_ (cdr ntw-nh))))))
                      layer-o
                      (transpose layer-ntw))
                 (get-delta (cdr o-nh) t_ (cdr ntw-nh)))))))
@@ -136,9 +135,9 @@
   (def (get-delta-w o t_ ntw)
     ;(displayln (get-delta (remove-head o) t_ (remove-head ntw)))
     (map (λ (lst-delta lst-o)
-           (map (λ (elem-delta)
-                  (scale (* -1 a elem-delta) lst-o))
-                lst-delta))
+            (map (λ (elem-delta)
+                    (scale (* -1 a elem-delta) lst-o))
+                 lst-delta))
          (get-delta (remove-head o) t_ (remove-head ntw))
          (remove-tail o)))
   ; }}}
@@ -151,26 +150,27 @@
     ;(displayln t_)
     ;(displayln ntw)
     (let ([delta-w (get-delta-w o t_ ntw)])
-      ;(displayln (caar delta-w))
-      ;(sleep 1)
+      ;(displayln (ntw-w delta-w 3 1 1))
+      ;(newline)
       (add-network network delta-w)))
   ; }}}
 
   ; analyze-error {{{
   (def (analyze-error i_ t_ ntw count_)
-    (let
+    (let*
       ([mean-error
-         (/ (foldl +
-                   0.0
-                   (map (λ (_o _t) (abs (- _o _t)))
-                        (map (λ (_i) (final-output (apply-network _i ntw #:act-f af))) i_)
-                        t_))
-            (length i_))])
+         (average
+           (map (λ (input true-value)
+                   (let ([output (final-output (apply-network input ntw))])
+                     ;(displayln output)
+                     (apply + (map loss-func output true-value))))
+                i_
+                t_))])
       (when (= (remainder count_ (quotient max-train-times num-of-show-m-err))
                0)
         (display "No. ")
         (display count_)
-        (display "\tmean error: ")
+        (display "\t\tmean error: ")
         (displayln mean-error)
         ;(displayln i_)
         ;(displayln t_)
@@ -181,6 +181,7 @@
   ; iter {{{
   ; train one time for all inputs
   (def (iter i_ t_ ntw)
+    ;(displayln (ntw-node ntw 3 1))
     (if (null? i_)
       ntw
       (iter (cdr i_) (cdr t_)
@@ -204,6 +205,7 @@
 
 
 (def sigmoid (λ (z) (/ 1 (+ 1 (exp (- 0.0 z))))))
+; dot-prod {{{
 (def (dot-prod l1 l2)
   (when (not (= (len l1) (len l2)))
     (displayln "dot-prod: l1 and l2 not aligned")
@@ -214,6 +216,7 @@
   (foldl +
          0
          (map * l1 l2)))
+; }}}
 (def (transpose lst-2d)
   (if (null? (car lst-2d))
     null
@@ -221,12 +224,12 @@
           (transpose (map rest lst-2d)))))
 (def (add-network ntw1 ntw2)
   (map (λ (layer d-layer)
-         (map (λ (lst d-lst)
-                (map +
-                     lst
-                     d-lst))
-              layer
-              d-layer))
+          (map (λ (lst d-lst)
+                  (map +
+                       lst
+                       d-lst))
+               layer
+               d-layer))
        ntw1
        ntw2))
 (def (scale k lst)
@@ -238,10 +241,7 @@
   (if (= n 0)
     null
     (cons x (repeat x (- n 1)))))
-
-(def (test)
-  (def ntw '(bp1 ((0.2 0.8) (-0.7 -0.5)) ((0.3 0.5))))
-  (displayln ntw)
-  (def input '((0.3 -0.7)))
-  (def t '(0.1))
-  (displayln (train ntw input t #:learning_rate 0.6)))
+(def (loss-func y t)
+  (/ (square (- y t))
+     2))
+(def (square x) (* x x))

@@ -16,17 +16,34 @@
                        data)])
     data))
 ; }}}
-; (get_training_sample) {{{
+; (csv->data str) {{{
 (def (csv->data str)
+  (def (logic-not x)
+    (if (eq? x "1")
+      0
+      1))
   (csv-map (lambda (row)
-             (map string->number row))
+             (map (λ (x) (logic-not x)) row))
+           (open-input-file str)))
+; }}}
+; (csv->label str) {{{
+(def (csv->label str)
+  (def (iter one i res)
+    (if (= i 0)
+      (reverse res)
+      (if (= (- 10 one) i)
+        (iter one (- i 1) (cons 1 res))
+        (iter one (- i 1) (cons 0 res)))))
+  (csv-map (lambda (row)
+             (iter (string->number (first row)) 10 null))
            (open-input-file str)))
 ; }}}
 
+
 (def train-images (preproc-data (csv->data "./dataset/train-images-weak.csv")))
-(def train-labels (csv->data "./dataset/train-labels-weak.csv"))
+(def train-labels (csv->label "./dataset/train-labels-weak.csv"))
 (def t-images (preproc-data (csv->data "./dataset/test-images-weak.csv")))
-(def t-labels (csv->data "./dataset/test-labels-weak.csv"))
+(def t-labels (csv->label "./dataset/test-labels-weak.csv"))
 
 ; (start-workflow samples labels t-samples t-labels) {{{
 (def (start-workflow samples labels t-samples t-labels)
@@ -40,12 +57,10 @@
   (check-input t-samples t-labels)
 
   (let* ([num-input (len (car samples))]
-         [num-output 1]
+         [num-output (len (car labels))]
          [ntw-struct (calc-ntw-struct num-input num-output)])
-    (display "input neuron numbers: ")
-    (displayln num-input)
-    (display "output neuron numbers: ")
-    (displayln num-output)
+    (displayln "network neuron numbers per layer (input layer on the far left): ")
+    (displayln ntw-struct)
     (displayln "train starting...")
     (newline) (newline)
 
@@ -57,10 +72,9 @@
     ;(displayln (map car labels))
     ;(sleep 1)
     ;(displayln (apply-network (car samples) ntw))
-    (define trained-ntw (train ntw samples (map car labels)
-                               #:act-f activity-function
+    (define trained-ntw (train samples labels ntw
                                #:learning-rate 0.1))
-    (analyze-result trained-ntw t-samples t-labels)
+    (analyze-result t-samples t-labels ntw)
     ))
 ; }}}
 
@@ -73,17 +87,16 @@
 ; (calc-ntw-struct n-i n-o) {{{
 (def (calc-ntw-struct n-i n-o)
   (list n-i
-        (inexact->exact (round (/ n-i 2.0)))
+        (inexact->exact (round (+ 5
+                                  (sqrt (+ n-i n-o)))))
         n-o))
 ; }}}
 
 ; (analyze-result ntw test-samples test-labels) {{{
-(def (analyze-result ntw test-samples test-labels)
+(def (analyze-result test-samples test-labels ntw)
   (newline) (newline)
   (displayln "train finished..."))
 ; }}}
 
-(define (activity-function z) (* (sigmoid z)))
-(def (main)
+(module* main #f
   (start-workflow train-images train-labels t-images t-labels))
-(main)
