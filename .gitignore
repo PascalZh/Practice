@@ -6,3 +6,5 @@ sdkconfig*
 /C51/whut_homeworks/LED/*
 !/C51/whut_homeworks/LED/*.c
 !/C51/whut_homeworks/LED/*.png
+!nr1.log
+!nr2.log

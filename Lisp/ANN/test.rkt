@@ -17,11 +17,15 @@
 ;(ntw-node ntw 3 1)
 ;(def output (apply-network '(1 0) ntw))
 ;output
-(def ntw '(bp1 ((0.5 0.5) (0.5 0.5)) ((0.5 0.5))))
+(def ntw '(bp1  ((0.5 0.5))))
 ntw
-(def i '((1 2) (3 2)))
-(def o '((1) (0)))
-(def res (apply-network '(1 2) ntw))
-res
-;(def trained-ntw (train i o ntw))
-;(display trained-ntw)
+;(def ntw2 (make-network '(2 2 1)))
+;ntw2
+;(def ntw1 (add-network (cdr ntw) (cdr ntw2)))
+;ntw1
+(def i '((1 0)))
+(def o '((1)))
+;(def res (apply-network '(1 2) ntw))
+;res
+(def trained-ntw (train i o ntw #:learning-rate 0.6))
+(display trained-ntw)

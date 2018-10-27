@@ -73,8 +73,8 @@
     ;(sleep 1)
     ;(displayln (apply-network (car samples) ntw))
     (define trained-ntw (train samples labels ntw
-                               #:learning-rate 0.1))
-    (analyze-result t-samples t-labels ntw)
+                               #:learning-rate 0.6))
+    (analyze-result t-samples t-labels trained-ntw)
     ))
 ; }}}
 
@@ -88,15 +88,32 @@
 (def (calc-ntw-struct n-i n-o)
   (list n-i
         (inexact->exact (round (+ 5
-                                  (sqrt (+ n-i n-o)))))
+                                  (sqrt (* n-i n-o)))))
         n-o))
 ; }}}
 
 ; (analyze-result ntw test-samples test-labels) {{{
 (def (analyze-result test-samples test-labels ntw)
-  (newline) (newline)
-  (displayln "train finished..."))
+  (newline)
+  (displayln "train finished...")
+  (newline) (displayln "test starting...") (newline)
+  (let ([outputs (map (λ (input) (final-output (apply-network input ntw)))
+                      test-samples)])
+    (map (λ (output t)
+            (map (λ (ot tr) (display ot) (display "\t\t") (displayln tr))
+          output t) (newline))
+         outputs
+         test-labels))
+
+  (displayln "test finished")
+  (void))
 ; }}}
+(def (hour->times h)
+  (inexact->exact (round
+                    (/ (* h 60 60)
+                       (/ 64 1000.0)))))
 
 (module* main #f
+  (set-train-times 200)
+  (set-show-err 200)
   (start-workflow train-images train-labels t-images t-labels))

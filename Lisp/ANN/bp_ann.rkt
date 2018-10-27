@@ -3,15 +3,18 @@
 (require "../libcommon.rkt")
 
 (provide make-network apply-network final-output train)
-(provide ntw-layer ntw-node ntw-w)
-(provide transpose sigmoid dot-prod scale)
+(provide set-show-err set-train-times)
+(provide ntw-layer ntw-node ntw-w add-network)
+(provide transpose sigmoid dot-prod scale remove-head remove-tail)
 
 
-(def max-train-times 100000)
+(def max-train-times 1000000000)
 ; decide how many mean error during the training will be show
-(def num-of-show-m-err 100000) 
+(def show-err 10000000) 
 ;; 每个神经元都假定与前一层的全部神经元相连
 ;; 构造出来的网络实际上是权值(w)
+(def (set-show-err n) (set! show-err n))
+(def (set-train-times n) (set! max-train-times n))
 
 (def (ntw-layer ntw n-layer)
   (if (eq? (car ntw) 'bp1)
@@ -58,7 +61,6 @@
   (eq? (car obj) type))
 ; }}}
 
-
 ; apply-network {{{
 ; ReturnValue: 返回的是每个节点的输出值
 ; 神经元的层从左到右从0开始编号，每一层从上到下从0开始编号
@@ -86,6 +88,7 @@
   (first (reverse o)))
 ; }}}
 
+; train {{{
 ; alpha指的是学习率
 ; t表示真实值向量
 ; input 应该为二维的list，即训练对象
@@ -99,6 +102,8 @@
                                             #:act-f af
                                             #:precision p)])))
 
+; }}}
+
 ; train-bp1 {{{
 ; 根据wikipedia的公式而写
 ; 输出层应该只有一个neuron
@@ -108,8 +113,8 @@
                 #:act-f af
                 #:precision p)
 
-  ; get-delta {{{
-  (def (get-delta o-nh t_ ntw-nh) ; -nh represents no head
+  ; get-δ {{{
+  (def (get-δ o-nh t_ ntw-nh) ; -nh represents no head
     (let ([layer-o (car o-nh)])
       (if (null? ntw-nh)                    ; output layer
         (cons (map (λ (elem-o elem-t)
@@ -125,34 +130,36 @@
                            (- 1 elem-o)
                            (dot-prod
                              elem-ntw
-                             (first (get-delta (cdr o-nh) t_ (cdr ntw-nh))))))
+                             (first (get-δ (cdr o-nh) t_ (cdr ntw-nh))))))
                      layer-o
                      (transpose layer-ntw))
-                (get-delta (cdr o-nh) t_ (cdr ntw-nh)))))))
+                (get-δ (cdr o-nh) t_ (cdr ntw-nh)))))))
   ; }}}
 
-  ; get-delta-w {{{
-  (def (get-delta-w o t_ ntw)
-    ;(displayln (get-delta (remove-head o) t_ (remove-head ntw)))
-    (map (λ (lst-delta lst-o)
-            (map (λ (elem-delta)
-                    (scale (* -1 a elem-delta) lst-o))
-                 lst-delta))
-         (get-delta (remove-head o) t_ (remove-head ntw))
+  ; get-Δw {{{
+  (def (get-Δw o t_ ntw)
+    ;(displayln (get-Δw (remove-head o) t_ (remove-head ntw)))
+    (map (λ (layer-δ lst-o)
+            (map (λ (elem-δ)
+                    (scale (* -1 a elem-δ) lst-o))
+                 layer-δ))
+         (get-δ (remove-head o) t_ (remove-head ntw))
          (remove-tail o)))
   ; }}}
 
   ; new-network {{{
   ; t_ should be numbers; o should be result of apply-network
   (def (new-network o t_ ntw)
-    ;(displayln (get-delta-w o t_ ntw))
+    ;(displayln (get o t_ ntw))
     ;(displayln o)
     ;(displayln t_)
     ;(displayln ntw)
-    (let ([delta-w (get-delta-w o t_ ntw)])
-      ;(displayln (ntw-w delta-w 3 1 1))
-      ;(newline)
-      (add-network network delta-w)))
+    (let ([Δw (get-Δw o t_ ntw)])
+      ;(displayln ntw)
+      ;(displayln Δw)
+      ;(displayln (add-network network Δw))
+      ;(sleep 3)
+      (add-network ntw Δw))) ;!!!I spent 2 days to find that I write (add-network network Δw) mistakenly!!!
   ; }}}
 
   ; analyze-error {{{
@@ -162,15 +169,17 @@
          (average
            (map (λ (input true-value)
                    (let ([output (final-output (apply-network input ntw))])
-                     ;(displayln output)
+                     ;(map (λ (ot tr) (display ot) (display "\t\t") (displayln tr))
+                          ;output true-value)
+                     ;(newline)
                      (apply + (map loss-func output true-value))))
                 i_
                 t_))])
-      (when (= (remainder count_ (quotient max-train-times num-of-show-m-err))
+      (when (= (remainder count_ (quotient max-train-times show-err))
                0)
         (display "No. ")
         (display count_)
-        (display "\t\tmean error: ")
+        (display "\tmean error: ")
         (displayln mean-error)
         ;(displayln i_)
         ;(displayln t_)
@@ -181,7 +190,8 @@
   ; iter {{{
   ; train one time for all inputs
   (def (iter i_ t_ ntw)
-    ;(displayln (ntw-node ntw 3 1))
+    ;(displayln ntw)
+    ;(sleep 1)
     (if (null? i_)
       ntw
       (iter (cdr i_) (cdr t_)
@@ -192,7 +202,6 @@
 
 
   (def (loop i_ t_ ntw count_)
-    ;(displayln "loop")
     (if (= count_ max-train-times)
       ntw
       (let ([mean-error (analyze-error i_ t_ ntw count_)])
@@ -203,6 +212,7 @@
   (cons 'bp1 (loop input t network 0)))
 ; }}}
 
+; common {{{
 
 (def sigmoid (λ (z) (/ 1 (+ 1 (exp (- 0.0 z))))))
 ; dot-prod {{{
@@ -245,3 +255,4 @@
   (/ (square (- y t))
      2))
 (def (square x) (* x x))
+; }}}
