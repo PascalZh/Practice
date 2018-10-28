@@ -28,4 +28,5 @@ ntw
 ;(def res (apply-network '(1 2) ntw))
 ;res
 (def trained-ntw (train i o ntw #:learning-rate 0.6))
-(display trained-ntw)
+(displayln trained-ntw)
+(displayln (apply-network (car i) trained-ntw))

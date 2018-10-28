@@ -4,6 +4,43 @@
 (require "bp_ann.rkt")
 
 (require csv-reading)
+; (start-workflow samples labels t-samples t-labels) {{{
+(def (start-workflow samples labels t-samples t-labels)
+  ; t- affix refer to test-
+  (display "train sample numbers: ")
+  (displayln (len samples))
+  (display "train label numbers: ")
+  (displayln (len labels))
+
+  (check-input samples labels)
+  (check-input t-samples t-labels)
+
+  (let* ([num-input (len (car samples))]
+         [num-output (len (car labels))]
+         [ntw-struct (calc-ntw-struct num-input num-output)])
+    (def lr 0.6)
+    (def α 1)
+    (set-α α)
+    (displayln "network neuron numbers per layer (input layer on the far left): ")
+    (displayln ntw-struct)
+    (display "learning rate: ") (displayln lr)
+    (display "inertia term (momentum): ") (displayln α)
+    (newline) (displayln "train starting...") (newline) 
+
+    (define ntw (make-network ntw-struct))
+    ;(displayln ntw)
+    ;(displayln ntw-struct)
+    ;(displayln (len ntw))
+    ;(displayln samples)
+    ;(displayln (map car labels))
+    ;(sleep 1)
+    ;(displayln (apply-network (car samples) ntw))
+    (define trained-ntw (train samples labels ntw
+                               #:learning-rate lr
+                               #:precision 0.000001))
+    (analyze-result t-samples t-labels trained-ntw)
+    ))
+; }}}
 
 (def (mapmap proc l)
   (map (λ (l_) (map proc l_))
@@ -12,7 +49,7 @@
 (def (preproc-data data)
   (let* ([balanced (mapmap (λ (x) (- x 0.5)) data)]
          [average (map (λ (record)
-                          (+ (/ (apply + record) (len record)) 0.0))
+                         (+ (/ (apply + record) (len record)) 0.0))
                        data)])
     data))
 ; }}}
@@ -45,38 +82,6 @@
 (def t-images (preproc-data (csv->data "./dataset/test-images-weak.csv")))
 (def t-labels (csv->label "./dataset/test-labels-weak.csv"))
 
-; (start-workflow samples labels t-samples t-labels) {{{
-(def (start-workflow samples labels t-samples t-labels)
-  ; t- affix refer to test-
-  (display "train sample numbers: ")
-  (displayln (len samples))
-  (display "train label numbers: ")
-  (displayln (len labels))
-
-  (check-input samples labels)
-  (check-input t-samples t-labels)
-
-  (let* ([num-input (len (car samples))]
-         [num-output (len (car labels))]
-         [ntw-struct (calc-ntw-struct num-input num-output)])
-    (displayln "network neuron numbers per layer (input layer on the far left): ")
-    (displayln ntw-struct)
-    (displayln "train starting...")
-    (newline) (newline)
-
-    (define ntw (make-network ntw-struct))
-    ;(displayln ntw)
-    ;(displayln ntw-struct)
-    ;(displayln (len ntw))
-    ;(displayln samples)
-    ;(displayln (map car labels))
-    ;(sleep 1)
-    ;(displayln (apply-network (car samples) ntw))
-    (define trained-ntw (train samples labels ntw
-                               #:learning-rate 0.6))
-    (analyze-result t-samples t-labels trained-ntw)
-    ))
-; }}}
 
 ; (check-input samples labels) {{{
 (def (check-input samples labels)
@@ -89,7 +94,9 @@
   (list n-i
         (inexact->exact (round (+ 5
                                   (sqrt (* n-i n-o)))))
-        n-o))
+        n-o)
+  ;(list n-i 400 n-o)
+  )
 ; }}}
 
 ; (analyze-result ntw test-samples test-labels) {{{
@@ -100,20 +107,22 @@
   (let ([outputs (map (λ (input) (final-output (apply-network input ntw)))
                       test-samples)])
     (map (λ (output t)
-            (map (λ (ot tr) (display ot) (display "\t\t") (displayln tr))
-          output t) (newline))
+           (map (λ (ot tr) (display ot) (display "\t\t") (displayln tr))
+                output t) (newline))
          outputs
          test-labels))
 
   (displayln "test finished")
   (void))
 ; }}}
+
+; this function needs to be modified when the training has been modified.
 (def (hour->times h)
   (inexact->exact (round
                     (/ (* h 60 60)
                        (/ 64 1000.0)))))
 
 (module* main #f
-  (set-train-times 200)
-  (set-show-err 200)
+  (set-train-times 100)
+  (set-show-err 100)
   (start-workflow train-images train-labels t-images t-labels))
