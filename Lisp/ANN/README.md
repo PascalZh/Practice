@@ -30,4 +30,4 @@ I compared different inertia term (momentum) α, but it seems make no difference
 # TODO
 - [x]  `apply-network` is ok.
 - [x]  there are some bugs with `train`.
-- [ ]  attaining big samples.
+- [x]  attaining big samples.

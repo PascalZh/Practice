@@ -7,4 +7,5 @@ sdkconfig*
 !/C51/whut_homeworks/LED/*.c
 !/C51/whut_homeworks/LED/*.png
 
-!/Lisp/ANN/*.log
+/Lisp/ANN/dataset
+/Lisp/ANN/result

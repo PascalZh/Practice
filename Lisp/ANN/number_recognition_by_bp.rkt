@@ -19,7 +19,7 @@
          [num-output (len (car labels))]
          [ntw-struct (calc-ntw-struct num-input num-output)])
     (def lr 0.6)
-    (def α 1)
+    (def α 0.1)
     (set-α α)
     (displayln "network neuron numbers per layer (input layer on the far left): ")
     (displayln ntw-struct)
@@ -54,14 +54,15 @@
     data))
 ; }}}
 ; (csv->data str) {{{
+(def make-data-reader
+  (make-csv-reader-maker
+   '((separator-chars            #\,)
+     (strip-leading-whitespace?  . #t)
+     (strip-trailing-whitespace? . #t))))
 (def (csv->data str)
-  (def (logic-not x)
-    (if (eq? x "1")
-      0
-      1))
   (csv-map (lambda (row)
-             (map (λ (x) (logic-not x)) row))
-           (open-input-file str)))
+             (map string->number row))
+           (make-data-reader (open-input-file str))))
 ; }}}
 ; (csv->label str) {{{
 (def (csv->label str)
@@ -77,10 +78,18 @@
 ; }}}
 
 
-(def train-images (preproc-data (csv->data "./dataset/train-images-weak.csv")))
-(def train-labels (csv->label "./dataset/train-labels-weak.csv"))
-(def t-images (preproc-data (csv->data "./dataset/test-images-weak.csv")))
-(def t-labels (csv->label "./dataset/test-labels-weak.csv"))
+;(def train-images (csv->data "./dataset/train-images-weak.csv"))
+;(def train-labels (csv->label "./dataset/train-labels-weak.csv"))
+;(def t-images (csv->data "./dataset/test-images-weak.csv"))
+;(def t-labels (csv->label "./dataset/test-labels-weak.csv"))
+
+(def train-images (csv->data "./dataset/train-images.csv"))
+(def train-labels (csv->label "./dataset/train-labels.csv"))
+(def t-images (csv->data "./dataset/test-images.csv"))
+(def t-labels (csv->label "./dataset/test-labels.csv"))
+
+;(def train-images (csv->data "./foo.csv"))
+;(def train-labels (csv->label "./fool.csv"))
 
 
 ; (check-input samples labels) {{{
@@ -123,6 +132,7 @@
                        (/ 64 1000.0)))))
 
 (module* main #f
-  (set-train-times 100)
-  (set-show-err 100)
-  (start-workflow train-images train-labels t-images t-labels))
+  (set-train-times 300)
+  (set-show-err 300)
+  (start-workflow train-images train-labels t-images t-labels)
+  )

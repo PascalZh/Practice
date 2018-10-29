@@ -4,7 +4,7 @@
 
 (provide make-network apply-network final-output train)
 (provide set-show-err set-train-times)
-(provide set-α)
+(provide set-α set-min-part)
 (provide ntw-layer ntw-node ntw-w add-network)
 (provide transpose sigmoid dot-prod scale remove-head remove-tail)
 
@@ -99,8 +99,11 @@
                 t_))])
       (when (= (remainder count_ (quotient max-train-times show-err))
                0)
-        (display "No. ")
+        (display "Part No. ")
         (display count_)
+        (display " (")
+        (display (/ (round (* 10000 (/ count_ len_part))) 100.0))
+        (display "%)")
         (display "\tmean error: ")
         (displayln mean-error)
         ;(displayln i_)
@@ -123,20 +126,60 @@
   ; }}}
 
 
+
+  ; (loop-part i-p t-p ntw count_part) {{{
   (def former-m-e 0)
-  (def (loop i_ t_ ntw count_)
-    ;(displayln (current-milliseconds))
+  (def (loop-part i-p t-p ntw count_part)
+    (let ([i_ (car i-p)]
+          [t_ (car t-p)])
+      (if (null? i-p)
+        ntw
+        (let ([mean-error (analyze-error i_ t_ ntw count_part)])
+          (if (< (abs (- mean-error former-m-e)) p)
+            ntw
+            (begin 
+              (set! former-m-e mean-error)
+              (set! former-Δw 0)
+              (loop-part (cdr i-p) (cdr t-p) (iter i_ t_ ntw) (+ count_part 1))))))))
+  ; }}}
+
+
+  ; (loop i-p t-p ntw count_) {{{
+  (def (loop i-p t-p ntw count_)
     (if (= count_ max-train-times)
       ntw
-      (let ([mean-error (analyze-error i_ t_ ntw count_)])
-        ;(displayln (abs (- mean-error former-m-e)))
-        (if (< (abs (- mean-error former-m-e)) p)
-          ntw
-          (begin 
-            (set! former-m-e mean-error)
-            (loop i_ t_ (iter i_ t_ ntw) (+ count_ 1)))))))
+      (begin
+        (display "Train No. ") (displayln count_)
+        (loop i-p t-p (loop-part i-p t-p ntw 0) (+ count_ 1)))))
+  ; }}}
 
-  (cons 'bp1 (loop input t network 0)))
+  ; (part d){{{
+  (def (part d)
+    (def (iter d_ res)
+      (if (< (len d_) (* min-part 1.3))
+        (cons d_ res)
+        (iter (drop d_ min-part) (cons (take d_ min-part) res))))
+    (iter d null))
+  ; }}}
+
+  ; (preprocess input t ntw) {{{
+  (def len_part 0)
+  (def (preprocess input t ntw)
+    (def i-p (part input))
+    (def t-p (part t))
+    (set! len_part (len i-p))
+    (display "data have been parted into ")
+    (display len_part) (displayln " parts.") (newline)
+    ;(def (iter i_ t_ ntw)
+    ;(if (null? i_)
+    ;ntw
+    ;(iter (cdr i_) (cdr t_)
+    ;(loop (car i_) (car t_) ntw 0))))
+    ;(iter i-p t-p network)
+    (loop i-p t-p ntw 0))
+  ; }}}
+
+  (cons 'bp1 (preprocess input t network)))
 ; }}}
 
 ; network API {{{
@@ -145,11 +188,13 @@
 ; decide how many mean error during the training will be show
 (def show-err 10000000) 
 (def α 0.5)
+(def min-part 50)
 ;; 每个神经元都假定与前一层的全部神经元相连
 ;; 构造出来的网络实际上是权值(w)
 (def (set-train-times n) (set! max-train-times n))
 (def (set-show-err n) (set! show-err n))
 (def (set-α α_) (set! α α_))
+(def (set-min-part x) (set! min-part x))
 
 (def (ntw-layer ntw n-layer)
   (if (eq? (car ntw) 'bp1)
