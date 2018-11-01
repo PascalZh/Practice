@@ -39,6 +39,7 @@
                                #:learning-rate lr
                                #:precision 0.000001))
     (analyze-result t-samples t-labels trained-ntw)
+    (displayln trained-ntw)
     ))
 ; }}}
 
@@ -83,13 +84,16 @@
 ;(def t-images (csv->data "./dataset/test-images-weak.csv"))
 ;(def t-labels (csv->label "./dataset/test-labels-weak.csv"))
 
-(def train-images (csv->data "./dataset/train-images.csv"))
-(def train-labels (csv->label "./dataset/train-labels.csv"))
-(def t-images (csv->data "./dataset/test-images.csv"))
-(def t-labels (csv->label "./dataset/test-labels.csv"))
+;(def train-images (csv->data "./dataset/train-images.csv"))
+;(def train-labels (csv->label "./dataset/train-labels.csv"))
+;(def t-images (csv->data "./dataset/test-images.csv"))
+;(def t-labels (csv->label "./dataset/test-labels.csv"))
 
-;(def train-images (csv->data "./foo.csv"))
-;(def train-labels (csv->label "./fool.csv"))
+; this is for debug
+(def train-images (csv->data "./foo.csv"))
+(def train-labels (csv->label "./fool.csv"))
+(def t-images (csv->data "./foo.csv"))
+(def t-labels (csv->label "./fool.csv"))
 
 
 ; (check-input samples labels) {{{
@@ -113,13 +117,20 @@
   (newline)
   (displayln "train finished...")
   (newline) (displayln "test starting...") (newline)
-  (let ([outputs (map (λ (input) (final-output (apply-network input ntw)))
-                      test-samples)])
-    (map (λ (output t)
-           (map (λ (ot tr) (display ot) (display "\t\t") (displayln tr))
-                output t) (newline))
-         outputs
-         test-labels))
+  (let* ([outputs (map (λ (input) (final-output (apply-network input ntw)))
+                       test-samples)]
+         [result (map (λ (output t)
+                        (let* ([max-output (apply max output)]
+                               [norm-output (map (λ (x) (if (= x max-output) 1 0))
+                                                 output)])
+                          (if (equal? norm-output t)
+                            1
+                            0)))
+                      outputs
+                      test-labels)]
+         [success-rate (average result)])
+    (display "success rate: ") (display success-rate) (display " (")
+    (display (exact->inexact success-rate)) (displayln ")"))
 
   (displayln "test finished")
   (void))
@@ -132,7 +143,5 @@
                        (/ 64 1000.0)))))
 
 (module* main #f
-  (set-train-times 300)
-  (set-show-err 300)
-  (start-workflow train-images train-labels t-images t-labels)
-  )
+  (set-train-times 30)
+  (start-workflow train-images train-labels t-images t-labels))

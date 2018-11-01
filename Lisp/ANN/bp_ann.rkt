@@ -3,7 +3,7 @@
 (require "../libcommon.rkt")
 
 (provide make-network apply-network final-output train)
-(provide set-show-err set-train-times)
+(provide set-train-times)
 (provide set-α set-min-part)
 (provide ntw-layer ntw-node ntw-w add-network)
 (provide transpose sigmoid dot-prod scale remove-head remove-tail)
@@ -85,30 +85,27 @@
   ; }}}
 
   ; analyze-error {{{
-  (def (analyze-error i_ t_ ntw count_)
+  (def (analyze-error i_ t_ ntw count_part count_)
     (let
-      ([mean-error
+      ([mean-error  ; errr = 1/2 * (y - t)^2
          (average
            (map (λ (input true-value)
                   (let ([output (final-output (apply-network input ntw))])
-                    ;(map (λ (ot tr) (display ot) (display "\t\t") (displayln tr))
-                    ;output true-value)
-                    ;(newline)
                     (apply + (map loss-func output true-value))))
                 i_
-                t_))])
-      (when (= (remainder count_ (quotient max-train-times show-err))
+                t_))]
+       [abs-error null])
+      (when (= (remainder count_part (max 1 (quotient len_part show-part-num)))
                0)
-        (display "Part No. ")
-        (display count_)
-        (display " (")
-        (display (/ (round (* 10000 (/ count_ len_part))) 100.0))
-        (display "%)")
-        (display "\tmean error: ")
-        (displayln mean-error)
-        ;(displayln i_)
-        ;(displayln t_)
-        )
+        (when (= (remainder count_ (max 1 (quotient max-train-times show-err)))
+                 0)
+          (display "Train No. ") (display count_)
+          (display "\tPart No. ")
+          (display count_part)
+          (display " (")
+          (display (/ (round (* 10000 (/ count_part len_part))) 100.0))
+          (display "%)")
+          (display "\tmean error: ") (displayln mean-error)))
       mean-error))
   ; }}}
 
@@ -125,32 +122,27 @@
                          ntw))))
   ; }}}
 
-
-
   ; (loop-part i-p t-p ntw count_part) {{{
   (def former-m-e 0)
-  (def (loop-part i-p t-p ntw count_part)
-    (let ([i_ (car i-p)]
-          [t_ (car t-p)])
-      (if (null? i-p)
-        ntw
-        (let ([mean-error (analyze-error i_ t_ ntw count_part)])
-          (if (< (abs (- mean-error former-m-e)) p)
-            ntw
-            (begin 
-              (set! former-m-e mean-error)
-              (set! former-Δw 0)
-              (loop-part (cdr i-p) (cdr t-p) (iter i_ t_ ntw) (+ count_part 1))))))))
+  (def (loop-part i-p t-p ntw count_part count_)
+    (if (null? i-p)
+      ntw
+      (let* ([t_ (car t-p)]
+             [i_ (car i-p)]
+             [mean-error (analyze-error i_ t_ ntw count_part count_)])
+        (if (< (abs (- mean-error former-m-e)) p)
+          ntw
+          (begin 
+            (set! former-m-e mean-error)
+            (set! former-Δw 0)
+            (loop-part (cdr i-p) (cdr t-p) (iter i_ t_ ntw) (+ count_part 1) count_))))))
   ; }}}
-
 
   ; (loop i-p t-p ntw count_) {{{
   (def (loop i-p t-p ntw count_)
     (if (= count_ max-train-times)
       ntw
-      (begin
-        (display "Train No. ") (displayln count_)
-        (loop i-p t-p (loop-part i-p t-p ntw 0) (+ count_ 1)))))
+      (loop i-p t-p (loop-part i-p t-p ntw 0 count_) (+ count_ 1))))
   ; }}}
 
   ; (part d){{{
@@ -169,7 +161,11 @@
     (def t-p (part t))
     (set! len_part (len i-p))
     (display "data have been parted into ")
-    (display len_part) (displayln " parts.") (newline)
+    (display len_part) (displayln " parts:")
+    (map (λ (part) (display (len part)) (display " ")) i-p)
+    (newline) (newline)
+    ;(displayln i-p)
+    ;(displayln t-p)
     ;(def (iter i_ t_ ntw)
     ;(if (null? i_)
     ;ntw
@@ -186,13 +182,14 @@
 
 (def max-train-times 1000000000)
 ; decide how many mean error during the training will be show
-(def show-err 10000000) 
+(def show-err 100) 
+(def show-part-num 100)
 (def α 0.5)
 (def min-part 50)
 ;; 每个神经元都假定与前一层的全部神经元相连
 ;; 构造出来的网络实际上是权值(w)
 (def (set-train-times n) (set! max-train-times n))
-(def (set-show-err n) (set! show-err n))
+;(def (set-show-err n) (set! show-err n))
 (def (set-α α_) (set! α α_))
 (def (set-min-part x) (set! min-part x))
 
