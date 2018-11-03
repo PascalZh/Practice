@@ -1,6 +1,7 @@
 #lang racket
-(provide def len mapmap average pow even? square)
+(provide def len average pow even? square)
 (provide csv-take)
+(provide mapmap build-mlist mlist-ref)
 
 (define-syntax def
   (syntax-rules ()
@@ -18,6 +19,16 @@
 (def (mapmap proc arg)
   (map (λ (lst) (map proc lst))
        arg))
+(def (build-mlist n proc)
+  (def (iter i res)
+    (if (= i 0)
+      res
+      (iter (i . - . 1) (mcons (proc (i . - . 1)) res))))
+  (iter n null))
+(def (mlist-ref mlst n)
+  (if (= n 0)
+    (mcar mlst)
+    (mlist-ref (mcdr mlst) (n . - . 1))))
 
 ; math {{{
 
