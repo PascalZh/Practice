@@ -3,7 +3,7 @@ This created for practicing something about ANN.
 
 ## Table of Contents
 
-[**BP Neural Network with Racket**](#a-simple-bp-network)
+[**BP Neural Network with Racket**](#a-simple-bp-network-algorithm-by-racket)
 * [Training Analysis](#bp-ntw-racket-analysis)
 * [Summary](#bp-ntw-racket-summary)
 * [TODO](#bp-ntw-racket-todo)
