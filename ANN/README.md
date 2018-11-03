@@ -23,7 +23,7 @@ A w is a weight, determined by two nodes.
 #### Step 1: nr1.log nr2.log
 *nr1.log* is the log file of *number_recognition_by_bp.rkt* of first try.
 I had planned to run the train for 14 hours. But I found some abnormal data.
-The total error (suppose loss function is <img src="http://www.sciweavers.org/tex2img.php?eq=%5Cfrac%7B1%7D%7B2%7D%20%28y%20-%20t%29%5E2&bc=White&fc=Black&im=jpg&fs=12&ff=arev&edit=0" align="center" border="0" alt="\frac{1}{2} (y - t)^2" width="76" height="43" /> ) is calculated by simply add up the error of every output neuron.
+The total error (suppose loss function is <img src="http://latex.codecogs.com/gif.latex?%5Cfrac%7B1%7D%7B2%7D%20%28y%20-%20t%29%5E2" /> ) is calculated by simply add up the error of every output neuron.
 The mean total error as shown in the nr1.log file has decreased rapidly, but after 2 or 3 loops it decreases very slowly.
 The abnormality is that after about ten thousands it increases slowly to my surprise.
 So I stopped the training, and just loops for 200 times so I can see the result. The result is in the nr2.log file.
