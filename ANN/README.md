@@ -45,6 +45,13 @@ I try to use this simple bp neural network to recognize handwritten numbers. Eve
 
 I choose **SGD** (stochastic gradient decreasing) to update the weight values. So the network will converge very soon but perhaps converge to local optimum solution (this is true for 2.log).
 
+**file explanation:**
++ *1.log* is the output of program that runs for a day.
++ *2.log* is the output of the optimized version that runs for a day.
++ *success_rate.log* is extracted from *2.log* for convenience.
++ *success_rate.png* is the visualized version.
++ *mean_error.png* is the diagram of *2.log*.
+
 <a name="bp-ntw-racket-summary"></a>
 ### Summary
 Choose list to calculate the network is not wise. And my algorithm does really cost memory. Maybe I should write the program with C++.
