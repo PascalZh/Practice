@@ -1,6 +1,5 @@
-.build/*
-**/build/*
-sdkconfig*
+build/
+__pycache__/
 
 *.exe
 *.out
@@ -10,6 +9,7 @@ sdkconfig*
 !/C51/whut_homeworks/LED/*.c
 !/C51/whut_homeworks/LED/*.png
 
+foo/
 foo.*
 bar.*
 foobar.*

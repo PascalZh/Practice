@@ -2,11 +2,28 @@
 #lang racket/gui
 (require "libcommon.rkt")
 
-(provide show-maze)
-(provide set-origin set-size set-grid-size set-colors
-         set-background get-canvas)
+; interface
+
+; maze-driver-loop should be threaded
+; because only after executing all expressions of the program will the main window show
+(provide show-maze maze-driver-loop)
+
+(provide (contract-out
+           [set-origin ((number? number?) () . ->* . void?)]
+           [set-size ((number? number?) () . ->* . void?)]
+           [set-grid-size ((number? number?) () . ->* . void?)]
+           [set-colors (case->
+                         [colors? . -> . void?]
+                         [number? number? string? . -> . void?])]
+           [set-background (string? . -> . void?)])
+         get-canvas)
+
+; end of interface
+
+; data definitions
 (provide make-colors colors-ref colors-set!)
 
+; paint-maze {{{
 (def (paint-maze canvas dc)
   (def (iter i)
     (def (iter_ j)
@@ -38,6 +55,28 @@
         maze-height)
 
   (iter W))
+; }}}
+
+
+; implementation: colors {{{
+(def (colors? c) (mpair? c))
+(def (make-colors w h)
+  (build-mlist W (λ (x) (build-mlist H (λ (x) "blue")))))
+(def (colors-ref clrs x y)
+  (mlist-ref (mlist-ref clrs x) y))
+
+(def (colors-set! clrs x y color)
+  (def (iter l i)
+    (def (iter_ l_ j)
+      (if (= j 0)
+        (set-mcar! l_ color)
+        (iter_ (mcdr l_) (j . - . 1))))
+    (if (= i 0)
+      (iter_ (mcar l) y)
+      (iter (mcdr l) (i . - . 1))))
+  (iter clrs x))
+; }}}
+
 
 (def H 10)          (def W 10)
 (def Ox 10)         (def Oy 11)
@@ -47,13 +86,13 @@
 (def maze-width (+ grid-border (* grid-width W)))
 (def maze-height (+ grid-border (* grid-height H)))
 
-(def (make-colors w h)
-  (build-mlist W (λ (x) (build-mlist H (λ (x) "blue")))))
 
 ; assign color for every grid
 (def colors (make-colors W H))
 (def background "cyan")
 
+
+; implementation: interface {{{
 (def (set-origin x y)
   (set! Ox x)
   (set! Oy y)
@@ -79,20 +118,8 @@
                  (refresh-maze)]))
 
 (def (set-background bg) (set! background bg) (refresh-maze))
+; }}}
 
-(def (colors-ref clrs x y)
-  (mlist-ref (mlist-ref clrs x) y))
-
-(def (colors-set! clrs x y color)
-  (def (iter l i)
-    (def (iter_ l_ j)
-      (if (= j 0)
-        (set-mcar! l_ color)
-        (iter_ (mcdr l_) (j . - . 1))))
-    (if (= i 0)
-      (iter_ (mcar l) y)
-      (iter (mcdr l) (i . - . 1))))
-  (iter clrs x))
 
 (def canvas 0)
 (def (get-canvas) canvas)
@@ -112,6 +139,7 @@
   )
 ; }}}
 
+; implementation: show-maze and maze-driver-loop
 (def (show-maze)
   (def frame (new frame% [label "Maze"]
                   [width (+ Ox Ox maze-width)]
