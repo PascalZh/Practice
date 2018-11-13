@@ -1,0 +1,59 @@
+.search {
+  /*background-color: #FFFFFF;*/
+  padding-left: 8px;
+  padding-right: 8px;
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+
+.search-item {
+  background-color: #ddffff!important;
+  padding: 14px;
+  margin-top: 18px;
+  margin-bottom: 18px;
+  border-left: 6px solid #ccc!important;
+  border-color: #2196F3!important;
+}
+
+body {
+  /*background: url(/images/ava7patterns_pattern_1023.png);*/
+  /*background-repeat:repeat-y repeat-x;*/
+  background-image: radial-gradient(#99CCCC, #7171B7);
+}
+
+.container {
+  background-color: #FAFAFA
+}
+
+.login-box {
+  padding: 12px 8px 12px 8px;
+  /*background-color: #32ea32;*/
+}
+
+.sticky {
+  position: fixed;
+}
+
+.carousel-my-container {
+  padding: 0 0 0 0;
+  background-color: rgba(0,0,0,0);
+}
+
+#backtotop { /* back to top button */
+	position: fixed;
+	bottom: 5%; /* 小按钮到浏览器底边的距离 */
+	right: 5%; /* 小按钮到浏览器右边框的距离 */
+	color: #333; /* 小按钮中文字的颜色 */
+	z-index: 1000;
+	background: #cfcfcf; /* 小按钮底色 */
+	padding: 10px; /* 小按钮中文字到按钮边缘的距离 */
+	border-radius: 100px; /* 小按钮圆角的弯曲程度（半径）*/
+	-moz-border-radius: 100px;
+	-webkit-border-radius: 100px;
+	font-weight: normal; /* 小按钮中文字的粗细 */
+	text-decoration: none !important;
+}
+
+#backtotop a {
+  outline: none;
+}

@@ -1,6 +1,6 @@
 #lang racket
 (provide def len average pow even? square)
-(provide csv-take sh remove\n)
+(provide csv-take sh)
 (provide mapmap build-mlist mlist-ref)
 
 (define-syntax def
@@ -17,9 +17,6 @@
 
 (def (sh cmd)
   (with-output-to-string (λ () (system cmd))))
-
-(def (remove\n str)
-  (string-replace str #rx"\n$" ""))
 
 (def len length)
 (def (mapmap proc arg)

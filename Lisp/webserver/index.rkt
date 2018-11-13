@@ -11,26 +11,37 @@
 (require xml)
 (require "../libcommon.rkt")
 (require "manipulate_db.rkt")
+(require "model_search.rkt")
 
+(struct UserInfo (username admin))
 (define-values (dispatch url)
   (dispatch-rules
     [("") render/response-index]
+
     [("esp32") render/response-esp32]
-    [("get_ip") render/response-get-ip]))
+    ; get_ip render the same page with esp32
+    [("get_ip") render/response-get-ip]
+
+    [("login") render/response-login]
+    ))
 
 (def (start request)
   (initial-db)
   (dispatch request))
 
+
+(def ip "还没有获取IP")
+; implementation: render {{{
 (def (render/response-esp32 request)
   (render/response-with-template 
-    (include-template "./template/content_esp32.html")
+    (include-template "./template/page_esp32.html")
     request))
 
 (def (render/response-index request)
   (render/response-with-template
-    (include-template "./template/content_index.html")
-    request))
+    (include-template "./template/page_index.html")
+    request
+    #:carousel? #t))
 
 (def (render/response-get-ip request)
   (let*
@@ -56,23 +67,58 @@
   (let* ([search-name (extract-binding/single
                         'search
                         (request-bindings request))]
-         [search-html (render-search-items search-name (query-search search-name))])
-    (include-template "./template/content_search.html")))
+         [search-html (render-search-items
+                        search-name
+                        (query-fortune))])
+    (include-template "./template/page_search.html")))
 
-(def ip "还没有获取IP")
-(def html-content "")
-(def (render/response-with-template content request)
+(def (render/response-login request)
+  (def bindings (request-bindings request))
+  (def username "")
+  (def userpwd "")
+  (def content "")
+  (if (and (exists-binding? 'username bindings)
+           (exists-binding? 'userpwd bindings))
+    (begin
+      (set! username (extract-binding/single
+                       'username
+                       bindings))
+      (set! userpwd (extract-binding/single
+                      'userpwd
+                      bindings))
+      (let ([admin (query-account username userpwd)])
+        (if (eq? admin #f)
+          (begin
+            (set! content "账号不存在或者密码错误！")
+            (render/response-with-template 
+              (include-template "./template/page_login.html")
+              request))
+          ; 登录成功，跳转回主页
+          ;(render/response-index request)
+          (redirect-to "/" permanently)
+          )))
+    (render/response-with-template 
+      (include-template "./template/page_login.html")
+      request)))
 
-  ; 由于render/response-esp32和render/response-index都要调用这个函数
+
+(def (render/response-with-template
+       content request
+       #:carousel? [carousel? #f])
+
+  ; 由于render/response-esp32和render/response-index ... 都要调用这个函数
   ; 而且搜索功能应该在两个页面中都能使用，所以在这里设置搜索页面
-  (set! html-content content)
+  (def html-content content)
   (when (exists-binding? 'search (request-bindings request))
     (set! html-content (render-search-page request)))
 
-  (let ([navbar (include-template "./template/navbar_1.html")])
+  (let ([navbar (include-template "./template/navbar_1.html")]
+        [carousel (if carousel? (include-template "./template/carousel_1.html")
+                    "")])
     (page
       (response/xexpr
         `(html ,(make-cdata #f #f (include-template "./template/template.html")))))))
+; }}} end implementation
 
 (def (urlopen url)
   (define-values
@@ -82,6 +128,8 @@
   (read port))
 
 
+(current-error-port (open-output-file "log/error.log" #:exists 'append))
+(current-output-port (open-output-file "log/output.log" #:exists 'append))
 (serve/servlet start
                #:port 8888
                #:servlet-path "/"

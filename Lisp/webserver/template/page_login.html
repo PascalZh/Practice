@@ -1,0 +1,53 @@
+<script type="text/javascript">
+  //实例：button按钮，结合onclick事件，验证和提交表单
+  window.onload = function() {
+    document.getElementById("name1").focus();
+  }
+function checkForm()
+{
+  //判断用户名是否为空，不需要return
+  if(document.login.username.value=="") {
+    window.alert("用户名不能为空！");
+
+  } else {
+    //使用form对象的submit()方法，实现提交，不用return
+    console.log($.fn.jquery);
+    var user = $('#name1');
+    var pwd = $('#pwd1');
+
+    var hash = $.md5(pwd.val());
+    pwd.val(hash);
+    document.login.submit();
+
+  }
+
+}
+</script>
+
+<div class="login-box">
+  <form name="login" method="get" action="/login" onsubmit="return checkForm()">
+
+    <table width="100%" cellspacing="0" cellpadding="5" border="0">
+      <tbody>
+
+        <tr>
+          <td width="120" align="right">用户名</td>
+          <td width="auto" align="left"><input type="text" name="username" id="name1"/></td>
+        </tr>
+
+        <tr>
+          <td width="120" align="right">密码</td>
+          <td width="auto" align="left"><input type="password" name="userpwd" id="pwd1" /></td>
+        </tr>
+
+        <tr>
+          <td width="120" align="right"></td>
+          <td width="auto" align="left"><input type="submit" value="登录" /></td>
+        </tr>
+
+      </tbody>
+    </table>
+
+  </form>
+</div>
+@content
