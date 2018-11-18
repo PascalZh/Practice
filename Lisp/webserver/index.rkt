@@ -18,11 +18,15 @@
   (dispatch-rules
     [("") render/response-index]
 
+    [("db" (string-arg) ...) (λ (req path) (redirect-to "/conf/not-found.html"permanently))]
+
     [("esp32") render/response-esp32]
     ; get_ip render the same page with esp32
-    [("get_ip") render/response-get-ip]
+    [("esp32" "get_ip") render/response-get-ip]
 
     [("login") render/response-login]
+
+    [("test" (string-arg) ...) render/response-test]
     ))
 
 (def (start request)
@@ -60,7 +64,8 @@
              s_out_html))
          )])
     (set! ip ip_)
-    (render/response-esp32 request)))
+    (render/response-esp32 request)
+    (close-output-port s_out) (close-output-port s_err)))
 
 ; return html as a string
 (def (render-search-page request)
@@ -118,6 +123,89 @@
     (page
       (response/xexpr
         `(html ,(make-cdata #f #f (include-template "./template/template.html")))))))
+
+(def (render/response-test request path)
+  (cond 
+    [(= (length path) 0)
+     (response/xexpr
+       (let ([content (include-template "./template/page_test.html")])
+         (render/response-with-template content request)))]
+
+    [(and (string=? (car path) "add")
+          (andmap string->number (cdr path)))
+     (response/xexpr
+       (number->string
+         (apply
+           (λ (l r)
+             (+ (string->number l)
+                (string->number r)))
+           (cdr path))))]
+
+    [(and (= (length path) 1)
+          (string=? (car path) "test_ajax"))
+     (response/xexpr
+       (string->xexpr
+         "<font size=\"4\" face=\"arial\" color=\"cyan\">A response from server</font>"))]
+
+    [(and (= (length path) 1)
+          (string=? (car path) "screen_shot"))
+     (let*
+       ([cur-time (current-seconds)]
+        [err (call-with-output-string
+               (λ (p)
+                 (parameterize ([current-error-port p])
+                   (system "scrot tmp/scrot.png")
+                   (call-with-input-file
+                     "./tmp/scrot.png" #:mode 'binary
+                     (λ (in)
+                       (screenshot-insert! cur-time (read-bytes 99999999 in)))))))])
+       (if (= 0 (string-length err))
+         (begin
+           (response/xexpr
+             (string-append
+               "success! current time:"
+               (number->string cur-time))))
+         (response/xexpr
+           err)))]
+
+    [(and (= (length path) 1)
+          (string=? (car path) "screen_shot_get_list"))
+     ;(sh "../maze_foo.rkt")
+     (response/xexpr
+       (substring (apply string-append
+                         (map
+                           (λ (num)
+                             (string-append
+                               "|"
+                               (number->string num)))
+                           (query-screenshot-list)))
+                  1))]
+
+    [(and (= (length path) 2)
+          (string=? (car path) "screen_shot_get")
+          (number? (string->number (cadr path))))
+     (let ([data (query-screenshot (string->number (cadr path)))])
+       (when (eq? data #f)
+         (set! data (call-with-input-file
+                      "./images/404.jpg" #:mode 'binary
+                      (λ (in)
+                        (read-bytes 99999999 in)))))
+       (response/full
+         200 #"Get Screenshot"
+         (current-seconds) TEXT/HTML-MIME-TYPE
+         (list (make-header #"Content-Type"
+                            #"image/png"))
+         (list data)))]
+
+    [else
+      (response/xexpr
+        (with-output-to-string
+          (λ ()
+            (print
+              ;path
+              (request-uri request)
+              ))))]))
+
 ; }}} end implementation
 
 (def (urlopen url)
@@ -125,11 +213,15 @@
     (status headers port)
     (http-sendrecv/url (string->url url)
                        #:method "GET"))
-  (read port))
+  (begin0
+    (read port)
+    (close-input-port port)))
 
 
 (current-error-port (open-output-file "log/error.log" #:exists 'append))
 (current-output-port (open-output-file "log/output.log" #:exists 'append))
+(unless (directory-exists? "tmp")
+  (make-directory "tmp"))
 (serve/servlet start
                #:port 8888
                #:servlet-path "/"

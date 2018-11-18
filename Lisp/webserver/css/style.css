@@ -25,6 +25,17 @@ body {
   background-color: #FAFAFA
 }
 
+.no-gutters {
+  margin-right: 0;
+  margin-left: 0;
+
+  > .col,
+  > [class*="col-"] {
+    padding-right: 0;
+    padding-left: 0;
+  }
+}
+
 .login-box {
   padding: 12px 8px 12px 8px;
   /*background-color: #32ea32;*/
@@ -56,4 +67,77 @@ body {
 
 #backtotop a {
   outline: none;
+}
+
+.anchor-correct {
+  position: relative;
+  bottom: 73px;
+}
+
+.remote-control {
+  background-color: #132;
+  width: 61.8vmax;
+}
+
+/*.remote-control-main-container {*/
+  /*position: relative;*/
+  /*left: 20px;*/
+  /*top: 20px;*/
+  /*width: 50vmax;*/
+  /*height: 50vmax;*/
+  /*background-color: #12fe32;*/
+/*}*/
+
+/* remote-control-main is a container for arrows and buttons
+ * use relative to enable absolute position of imgs.
+ */
+.remote-control-main {
+  position: relative;
+  width: 100%;
+  height: 0;
+  /* padding-bottom will work too */
+  padding-top: 100%;
+  /* width: padding-top is actually width: height */
+  /* because through percentage padding-top is de facto calculated
+   * by father's width.
+   * padding-top is calculated by father's width.
+   * padding-top will change height.
+   */
+  background-color: #bbbbbb;
+}
+
+.remote-control-main #backward {
+  position: absolute;
+  top: calc(70% - 5%);
+  left: 45%;
+}
+.remote-control-main #foreward {
+  position: absolute;
+  top: calc(30% - 5%);
+  left: 45%;
+}
+.remote-control-main #turn-left {
+  position: absolute;
+  top: 45%;
+  left: calc(30% - 5%);
+}
+.remote-control-main #turn-right {
+  position: absolute;
+  top: 45%;
+  left: calc(70% - 5%);
+}
+.remote-control-main #turn-around {
+  position: absolute;
+  top: 45%;
+  left: 45%;
+}
+.remote-control-main #accelerate {
+  position: absolute;
+  top: calc(60% - 5%);
+  left: calc(90% - 5%);
+}
+.remote-control-main #decelerate {
+  position: absolute;
+  top: calc(40% - 5%);
+  left: calc(90% - 5%);
 }

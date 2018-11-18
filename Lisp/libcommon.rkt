@@ -50,4 +50,5 @@
         (iter res (square a) (/ n 2))
         (iter (* res a) a (- n 1)))))
   (iter 1 b p))
+
 ; }}}

@@ -1,0 +1,47 @@
+<h1>随便搞事情吧</h1>
+
+<hr/>
+
+<h3>利用URL做加法</h3>
+<p>
+尝试把<code>/test/add/232/323/134</code>加到域名上。
+</p>
+
+<hr />
+
+<h3>测试Ajax</h3>
+<p id="test_ajax"></p>
+<button class="btn btn-primary" onclick="onTestAjax()">点我</button>
+
+<hr />
+
+<h3>桌面截图</h3>
+<p>使用这个功能来截取服务器桌面。</p>
+
+<div class="container">
+
+  <div class="row">
+    <button id="screen_shot_btn"
+            autocomplete="off"
+            class="btn btn-dark"
+            onclick="onScreenShot()"
+            data-loading-text="正在截图...">
+      茄子└(^o^)┘
+    </button>
+    <button type="button" style="margin-left:10px;" class="btn btn-dark" data-toggle="collapse" data-target="#demo_collapse" onclick="onExpandScreenShotList()">点我展开历史截图</button>
+  </div>
+
+  <div class="row no-gutters">
+    <div class="col-md-10 col-12">
+      <img id="screen_img" class="img-responsive" width=100%></img>
+    </div>
+    <div class="col-md-2">
+      <div id="demo_collapse" class="collapse">
+        <table class="table table-bordered table-hover">
+          <tbody id="screen_shot_list">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
