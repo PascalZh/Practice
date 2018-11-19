@@ -3,29 +3,30 @@
   window.onload = function() {
     document.getElementById("name1").focus();
   }
-function checkForm()
-{
-  //判断用户名是否为空，不需要return
-  if(document.login.username.value=="") {
-    window.alert("用户名不能为空！");
 
-  } else {
-    //使用form对象的submit()方法，实现提交，不用return
-    console.log($.fn.jquery);
-    var user = $('#name1');
-    var pwd = $('#pwd1');
+<!--function checkForm()-->
+<!--{-->
+  <!--//判断用户名是否为空，不需要return-->
+  <!--if(document.login.username.value=="") {-->
+    <!--window.alert("用户名不能为空！");-->
 
-    var hash = $.md5(pwd.val());
-    pwd.val(hash);
-    document.login.submit();
+  <!--} else {-->
+    <!--//使用form对象的submit()方法，实现提交，不用return-->
+    <!--console.log($.fn.jquery);-->
+    <!--var user = $('#name1');-->
+    <!--var pwd = $('#pwd1');-->
 
-  }
-
-}
+    <!--var hash = $.md5(pwd.val());-->
+    <!--pwd.val(hash);-->
+    <!--document.login.submit();-->
+  <!--}-->
+<!--}-->
 </script>
 
 <div class="login-box">
-  <form name="login" method="get" action="/login" onsubmit="return checkForm()">
+  <form id="login" name="login" method="get" action="login"
+    <!--onsubmit="checkForm()-->
+    ">
 
     <table width="100%" cellspacing="0" cellpadding="5" border="0">
       <tbody>
@@ -50,4 +51,22 @@ function checkForm()
 
   </form>
 </div>
-@content
+
+<!--<iframe id="id_iframe" name="nm_iframe" style="display:none;"></iframe>-->
+
+<script charset="utf-8">
+$('#login').on('submit', function(e){
+    e = e || event
+    var user = $('#name1');
+    var pwd = $('#pwd1');
+
+    var hash = $.md5(pwd.val());
+
+    e.preventDefault() //阻止form表单默认提交
+    // 使用Math.random()防止浏览器使用缓存
+    // 如果浏览器使用缓存的话，就没有发送http请求
+    // 这样就会导致表单根本没有被发送到服务器，以致登录失败
+    window.location.href = '/login?' + 'username='+user.val() + '&userpwd=' + hash + '&refresh=' + Math.random();
+})
+
+</script>

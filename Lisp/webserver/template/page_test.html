@@ -24,20 +24,30 @@
     <button id="screen_shot_btn"
             autocomplete="off"
             class="btn btn-dark"
+            style="margin: 10px 20px 10px 20px;"
             onclick="onScreenShot()"
             data-loading-text="正在截图...">
       茄子└(^o^)┘
     </button>
-    <button type="button" style="margin-left:10px;" class="btn btn-dark" data-toggle="collapse" data-target="#demo_collapse" onclick="onExpandScreenShotList()">点我展开历史截图</button>
+    <button type="button" style="margin: 10px 20px 10px 20px;" class="btn btn-dark" data-toggle="collapse" data-target="#demo_collapse" onclick="onExpandScreenShotList()">点我展开历史截图</button>
   </div>
 
-  <div class="row no-gutters">
+  <div class="row no-gutters row-eq-height" style="margin: 10px 0px 10px 0px;">
     <div class="col-md-10 col-12">
-      <img id="screen_img" class="img-responsive" width=100%></img>
+
+      <div class="container" align="center">
+        <img id="screen_img" class="img-responsive" style="max-width: 100%;"></img>
+        
+        <!--下面的图片是为了提前加载好图片到缓存中-->
+        <img src="/images/loading.gif" hidden alt=""/>
+      </div>
+
     </div>
-    <div class="col-md-2">
+    <div class="col-md-2"  style="overflow: scroll; max-height: 80vh;">
       <div id="demo_collapse" class="collapse">
-        <table class="table table-bordered table-hover">
+        <table id="screen_shot_list_table"
+               class="table table-bordered table-hover"
+               style="margin-left: 5px;">
           <tbody id="screen_shot_list">
           </tbody>
         </table>

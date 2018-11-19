@@ -74,6 +74,16 @@ body {
   bottom: 73px;
 }
 
+#screen_shot_list_table tbody > tr > td {
+  /*background-color: #111;*/
+  padding: 1px 3px 1px 3px;
+}
+
+#screen_shot_list_table {
+  /*这个宽度好像无效，会自动设置成最小宽度*/
+  width: 10px;
+}
+
 .remote-control {
   background-color: #132;
   width: 61.8vmax;

@@ -26,16 +26,6 @@
       </li>
 
       <li class="nav-item">
-        <a class="nav-link" href="/login">
-          <span>
-            <strong>
-            Login
-            </strong>
-          </span>
-        </a>
-      </li>
-
-      <li class="nav-item">
         <a class="nav-link" href="/test">
           <span>
             <!--<img src="/svg/si-glyph-house.svg" width=16px height=16px />-->
@@ -59,9 +49,27 @@
         </div>
       </li>
     </ul>
+
+    <ul class="navbar-nav">
+
+      <li class="nav-item" id="my_nav_login">
+        <a class="nav-link" href="/login">
+          <span>
+            <strong>
+            Login
+            </strong>
+          </span>
+        </a>
+      </li>
+
+      @login-content
+
+    </ul>
+
+
     <form class="form-inline my-2 my-lg-0">
       <input class="form-control mr-sm-2" type="search" placeholder="看看有什么..." aria-label="Search" name="search">
-      <button class="btn btn-outline-success my-2 my-sm-0" type="submit">搜索</button>
+      <button class="btn btn-outline-dark my-2 my-sm-0" type="submit">搜索</button>
     </form>
   </div>
 </nav>

@@ -2,8 +2,21 @@
 #lang racket
 
 (require "../libcommon.rkt")
-(provide render-search-items)
+(require "manipulate_db.rkt")
+(require web-server/http/bindings web-server/templates)
 
+(provide render-admin-login-content)
+(provide render-search-page render-search-items)
+
+; return html as a string
+(def (render-search-page request)
+  (let* ([search-name (extract-binding/single
+                        'search
+                        (request-bindings request))]
+         [search-html (render-search-items
+                        search-name
+                        (query-fortune))])
+    (include-template "./template/page_search.html")))
 
 (def (render-search-items search-name query-result)
 
@@ -45,3 +58,14 @@
     str
     (apply string-append rest)
     "</div>"))
+
+(def (render-admin-login-content)
+  (string-append
+          "<li class=\"nav-item dropdown\">"
+          "<a class=\"nav-link dropdown-toggle\""
+          "href=\"#\" id=\"navbarDropdown\" role=\"button\""
+          "data-toggle=\"dropdown\" aria-haspopup=\"true\" aria-expanded=\"false\">"
+          "<img id=\"admin_img\" src=\"/images/admin.jpg\" height=\"20px\"/></a>"
+          "<div class=\"dropdown-menu\" aria-labelledby=\"navbarDropdown\">"
+          "<a class=\"dropdown-item\" href=\"javascript:onLogout()\">"
+          "<strong>Logout</strong></a></div></li>"))

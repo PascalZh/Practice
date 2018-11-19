@@ -4,7 +4,8 @@
          web-server/servlet-env
          web-server/dispatch
          web-server/page
-         web-server/templates)
+         web-server/templates
+         web-server/http/id-cookie)
 (require net/url)
 (require net/url-connect)
 ;(require db)
@@ -18,7 +19,7 @@
   (dispatch-rules
     [("") render/response-index]
 
-    [("db" (string-arg) ...) (λ (req path) (redirect-to "/conf/not-found.html"permanently))]
+    [("db" (string-arg) ...) (λ (req path) (redirect-to "/conf/not-found.html" permanently))]
 
     [("esp32") render/response-esp32]
     ; get_ip render the same page with esp32
@@ -35,7 +36,6 @@
 
 
 (def ip "还没有获取IP")
-; implementation: render {{{
 (def (render/response-esp32 request)
   (render/response-with-template 
     (include-template "./template/page_esp32.html")
@@ -46,6 +46,8 @@
     (include-template "./template/page_index.html")
     request
     #:carousel? #t))
+
+; get-ip {{{
 
 (def (render/response-get-ip request)
   (let*
@@ -66,50 +68,73 @@
     (set! ip ip_)
     (render/response-esp32 request)
     (close-output-port s_out) (close-output-port s_err)))
+; }}}
 
-; return html as a string
-(def (render-search-page request)
-  (let* ([search-name (extract-binding/single
-                        'search
-                        (request-bindings request))]
-         [search-html (render-search-items
-                        search-name
-                        (query-fortune))])
-    (include-template "./template/page_search.html")))
+; login  {{{
 
 (def (render/response-login request)
+  ;(sh "../maze_foo.rkt")
   (def bindings (request-bindings request))
-  (def username "")
-  (def userpwd "")
-  (def content "")
-  (if (and (exists-binding? 'username bindings)
-           (exists-binding? 'userpwd bindings))
-    (begin
-      (set! username (extract-binding/single
-                       'username
-                       bindings))
-      (set! userpwd (extract-binding/single
-                      'userpwd
-                      bindings))
-      (let ([admin (query-account username userpwd)])
-        (if (eq? admin #f)
-          (begin
-            (set! content "账号不存在或者密码错误！")
-            (render/response-with-template 
-              (include-template "./template/page_login.html")
-              request))
+  (def username #f)
+  (def userpwd #f)
+  (def content #f)
+  (when (and (exists-binding? 'username bindings)
+             (exists-binding? 'userpwd bindings))
+    (set! username (extract-binding/single
+                     'username
+                     bindings))
+    (set! userpwd (extract-binding/single
+                    'userpwd
+                    bindings)))
+  (if (and username userpwd)
+    (let ([admin (query-account username userpwd)])
+      (if (not admin)
+        (begin
+          (set! content "账号不存在或者密码错误！")
+          (render/response-with-template 
+            (include-template "./template/page_login.html")
+            request))
+        (begin
           ; 登录成功，跳转回主页
-          ;(render/response-index request)
-          (redirect-to "/" permanently)
-          )))
-    (render/response-with-template 
-      (include-template "./template/page_login.html")
-      request)))
+          ; 这里花了一晚上的时间调试都没有结果，提交表单时怎么也无法跳转到
+          ; 这段代码，结果第二天继续DEBUG时发现，原来程序并没有出错！！！
+          ; 是Firefox擅自把Cached的数据作为跳转页面，直接跳回主页了！！！
+          ; 清除Firefox缓存就好了%>_<%
+          ;(display "COOKIE HEADER: ")
+          ;(response/xexpr "HELLO")
+          ;(println (cookie->header
+                     ;(make-login-cookie username userpwd)))
+          (redirect-to "/" permanently
+                       #:headers
+                       (list
+                         (cookie->header
+                           (make-login-cookie username userpwd)))))))
+    (begin
+      (render/response-with-template 
+        (include-template "./template/page_login.html")
+        request))))
+; }}}
 
+; template {{{
 
 (def (render/response-with-template
        content request
        #:carousel? [carousel? #f])
+
+  (def login-content "")
+  (let* ([client-cookies (request-cookies request)]
+         [login-cookie (findf (λ (c)
+                                ;(println (client-cookie-name c))
+                                ;(println (client-cookie-value c))
+                                (query-account (client-cookie-name c)
+                                               (client-cookie-value c)))
+                              client-cookies)])
+    ; 如果是管理员，就设置login-content
+    (when (and login-cookie
+               (= 1 (query-account
+                      (client-cookie-name login-cookie)
+                      (client-cookie-value login-cookie))))
+      (set! login-content (render-admin-login-content))))
 
   ; 由于render/response-esp32和render/response-index ... 都要调用这个函数
   ; 而且搜索功能应该在两个页面中都能使用，所以在这里设置搜索页面
@@ -118,11 +143,16 @@
     (set! html-content (render-search-page request)))
 
   (let ([navbar (include-template "./template/navbar_1.html")]
-        [carousel (if carousel? (include-template "./template/carousel_1.html")
+        [carousel (if carousel?
+                    (include-template "./template/carousel_1.html")
                     "")])
-    (page
-      (response/xexpr
-        `(html ,(make-cdata #f #f (include-template "./template/template.html")))))))
+    (page (response/xexpr #:cookies empty
+            `(html ,(make-cdata
+                      #f #f
+                      (include-template "./template/template.html")))))))
+; }}}
+
+; test {{{
 
 (def (render/response-test request path)
   (cond 
@@ -205,7 +235,12 @@
               ;path
               (request-uri request)
               ))))]))
+; }}}
 
+(def (make-login-cookie name pwd)
+  (make-cookie
+    name pwd
+    #:expires (seconds->date (+ (current-seconds) (* 60 60 24 15)))))
 ; }}} end implementation
 
 (def (urlopen url)
@@ -220,10 +255,12 @@
 
 (current-error-port (open-output-file "log/error.log" #:exists 'append))
 (current-output-port (open-output-file "log/output.log" #:exists 'append))
+(def request-output (open-output-file "log/request.log" #:exists 'append))
 (unless (directory-exists? "tmp")
   (make-directory "tmp"))
 (serve/servlet start
                #:port 8888
+               #:stateless? #t
                #:servlet-path "/"
                #:servlet-regexp #rx""
                #:listen-ip #f
@@ -232,6 +269,7 @@
                #:server-root-path "."
                #:servlets-root "."
                #:command-line? #t
+               #:log-file request-output
                ;#:ssl? #t
                ;#:ssl-cert "./server-cert.pem"
                ;#:ssl-key "./private-key.pem"

@@ -7,6 +7,7 @@
 (provide initial-db
          query-fortune
          query-account account-insert!
+         admin-name admin-pwcred
          (contract-out
            [screenshot-insert! (-> number? bytes? any/c)]
            [query-screenshot-list (-> any/c)]
@@ -17,6 +18,7 @@
 (def metadata-3 "(timestamp INTEGER, picture BLOB)")
 
 (def db 0)
+(def admin-name "pascal")
 (def admin-pwcred (bytes->string/utf-8 (md5 "8f0ebf4cca28c7936fd6c15774bab9c5")))
 
 (def (initial-db)
@@ -39,7 +41,7 @@
       (string-append
         "CREATE TABLE accounts"
         metadata-2))
-    (account-insert! "pascal" admin-pwcred 1))
+    (account-insert! admin-name admin-pwcred 1))
 
   (unless (table-exists? db "screenshots")
     (query-exec db
