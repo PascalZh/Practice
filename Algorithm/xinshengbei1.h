@@ -8,34 +8,34 @@ void MinMax() {
 	bool RFirstIsSmaller(int Rx[][1], int R0[][1]);
 
 	bool x[5][5];
-	/*	x¾ØÕóÈçÏÂËùÊ¾
-			Éú²úÏßA	Éú²úÏßB	Éú²úÏßC	Éú²úÏßD	Éú²úÏßE
-	×é¼þ1
-	×é¼þ2
-	×é¼þ3
-	×é¼þ4
-	×é¼þ5
+	/*	xçŸ©é˜µå¦‚ä¸‹æ‰€ç¤º
+			ç”Ÿäº§çº¿A	ç”Ÿäº§çº¿B	ç”Ÿäº§çº¿C	ç”Ÿäº§çº¿D	ç”Ÿäº§çº¿E
+	ç»„ä»¶1
+	ç»„ä»¶2
+	ç»„ä»¶3
+	ç»„ä»¶4
+	ç»„ä»¶5
 
 	*/
 
-	//ÓÃÀ´´¢´æ×îÖÕÃ¿¸ö×é¼þÔÚÄÄ¸öÉú²úÏßÉú²ú£¬Ð¡±ê±íÊ¾µÚi¸ö×é¼þ£¬Öµ±íÊ¾µÚx_result[i]ÌõÉú²úÏß
+	//ç”¨æ¥å‚¨å­˜æœ€ç»ˆæ¯ä¸ªç»„ä»¶åœ¨å“ªä¸ªç”Ÿäº§çº¿ç”Ÿäº§ï¼Œå°æ ‡è¡¨ç¤ºç¬¬iä¸ªç»„ä»¶ï¼Œå€¼è¡¨ç¤ºç¬¬x_result[i]æ¡ç”Ÿäº§çº¿
 	int x_result[5];
 
 	for(int g=0;g<5;g++)// set x = 0
 		for (int h = 0; h < 5; h++)
 			x[g][h] = 0;
 		
-	int Rx[5][1] = { {0},{0},{0},{0},{0} };//Ô¼ÊøÌõ¼þRx<=R0
+	int Rx[5][1] = { {0},{0},{0},{0},{0} };//çº¦æŸæ¡ä»¶Rx<=R0
 	int R0[5][1] = { {3},{4},{3},{4},{6} };
 
-	int T[5][5] = {// T¾ØÕó´¢´æ¸÷Éú²úÏßÃ¿¸ö×é¼þºÄÊ±Çé¿ö£¬°´Ô­±í¸ñ¹¹Ôì
+	int T[5][5] = {// TçŸ©é˜µå‚¨å­˜å„ç”Ÿäº§çº¿æ¯ä¸ªç»„ä»¶è€—æ—¶æƒ…å†µï¼ŒæŒ‰åŽŸè¡¨æ ¼æž„é€ 
 		{10, 8, 20, 4, 8},
 		{4, 10, 6, 12, 5},
 		{22, 13, 4, 10, 8},
 		{2, 16, 25, 8, 2},
 		{6, 8, 13, 11, 16}
 	};
-	int R[5][5][5]={// µÚÒ»¸öÎå£¨µÚÒ»Î¬£©±íÊ¾ABCDE£¬¼ÇµÃ½«Ô­±í¸ñ×ªÖÃ
+	int R[5][5][5]={// ç¬¬ä¸€ä¸ªäº”ï¼ˆç¬¬ä¸€ç»´ï¼‰è¡¨ç¤ºABCDEï¼Œè®°å¾—å°†åŽŸè¡¨æ ¼è½¬ç½®
 {
 {2,0,1,0,0},
 {0,1,0,0,2},
@@ -86,10 +86,10 @@ void MinMax() {
 				this->time[i][0] = tmp.time[i][0];
 		}
 	};
-	Time vectorT; // ÔÚÑ­»·ÓÃÓÚÔÝ´æÊ±¼äÏòÁ¿£¨Ã¿¸öÖµ±íÊ¾¸÷Éú²úÏßËù»¨µÄÊ±¼ä£©
+	Time vectorT; // åœ¨å¾ªçŽ¯ç”¨äºŽæš‚å­˜æ—¶é—´å‘é‡ï¼ˆæ¯ä¸ªå€¼è¡¨ç¤ºå„ç”Ÿäº§çº¿æ‰€èŠ±çš„æ—¶é—´ï¼‰
 	Time minT;
-	minT.maxT = 32767;// ÉèÖÃÎªÒ»¸öºÜ´óµÄÊý
-	//´¢´æ×îÐ¡Ê±¼äµÄ½á¹¹Ìå
+	minT.maxT = 32767;// è®¾ç½®ä¸ºä¸€ä¸ªå¾ˆå¤§çš„æ•°
+	//å‚¨å­˜æœ€å°æ—¶é—´çš„ç»“æž„ä½“
 
 	for (int a = 0; a < 5; a++)
 		for (int b = 0; b < 5; b++)
@@ -103,34 +103,34 @@ void MinMax() {
 						x[3][d] = 1;
 						x[4][e] = 1;
 
-						// ³õÊ¼»¯Îª0 
+						// åˆå§‹åŒ–ä¸º0 
 						for (int j = 0; j < 5; j++)
 							Rx[j][0] = 0;
 
-						for (int k = 0; k < 5; k++)// Ëã³öRx
+						for (int k = 0; k < 5; k++)// ç®—å‡ºRx
 							for (int i = 0; i < 5; i++)
 								for (int j = 0; j < 5; j++)
 									Rx[i][0] += R[k][i][j] * x[j][k];
 
-						if (RFirstIsSmaller(Rx,R0)) {// ÊÇ·ñÂú×ãÏßÐÔÔ¼ÊøÌõ¼þRx<=R0
-							// ÕÒ³öÄÄÌõÉú²úÏßºÄÊ±×î³¤
+						if (RFirstIsSmaller(Rx,R0)) {// æ˜¯å¦æ»¡è¶³çº¿æ€§çº¦æŸæ¡ä»¶Rx<=R0
+							// æ‰¾å‡ºå“ªæ¡ç”Ÿäº§çº¿è€—æ—¶æœ€é•¿
 							// for...
-							for (int i = 0; i < 5; i++) {// ³õÊ¼»¯vectorTÎªÁã
+							for (int i = 0; i < 5; i++) {// åˆå§‹åŒ–vectorTä¸ºé›¶
 								vectorT.time[i][0] = 0;
 								vectorT.maxT = 0;
 							}
-							for (int i = 0; i < 5; i++)// ¼ÆËã³övectorT
+							for (int i = 0; i < 5; i++)// è®¡ç®—å‡ºvectorT
 								for (int j = 0; j < 5; j++) {
 									vectorT.time[i][0] += T[i][j] * x[j][i];
 
-									//ÕÒ³övectorT.maxT£¬´¢´æ¹¤×÷µÄ×ÜºÄÊ±
+									//æ‰¾å‡ºvectorT.maxTï¼Œå‚¨å­˜å·¥ä½œçš„æ€»è€—æ—¶
 									if (vectorT.maxT < vectorT.time[i][0])
 										vectorT.maxT = vectorT.time[i][0];
 								}
 				
-							// ÕÒ³öminT
+							// æ‰¾å‡ºminT
 							if (minT.maxT > vectorT.maxT) {
-								minT = vectorT;//ÕâÀïµ÷ÓÃTime½á¹¹ÌåµÄ¸´ÖÆ¹¹Ôìº¯Êý
+								minT = vectorT;//è¿™é‡Œè°ƒç”¨Timeç»“æž„ä½“çš„å¤åˆ¶æž„é€ å‡½æ•°
 								x_result[0] = a;
 								x_result[1] = b;
 								x_result[2] = c;
@@ -139,7 +139,7 @@ void MinMax() {
 							}
 						}
 									
-						x[0][a] = 0;//»¹Ô­xÊý×é
+						x[0][a] = 0;//è¿˜åŽŸxæ•°ç»„
 						x[1][b] = 0;
 						x[2][c] = 0;
 						x[3][d] = 0;
@@ -149,13 +149,13 @@ void MinMax() {
 						
 					}
 
-	// Çî¾ÙÍê±Ï£¬´òÓ¡½á¹û
+	// ç©·ä¸¾å®Œæ¯•ï¼Œæ‰“å°ç»“æžœ
 	std::cout << "minT.maxT:" << minT.maxT << std::endl;
 	for (int i = 0; i < 5; i++)
-		std::cout << "Éú²úÏß" << i+1 << "Ëù»¨µÄÊ±¼ä" << minT.time[i][0] << std::endl;
+		std::cout << "ç”Ÿäº§çº¿" << i+1 << "æ‰€èŠ±çš„æ—¶é—´" << minT.time[i][0] << std::endl;
 
 		for (int i = 0; i < 5; i++)
-			std::cout << "Áã¼þ" << i+1 << ":" << "Éú²úÏß" << x_result[i]+1 << std::endl;
+			std::cout << "é›¶ä»¶" << i+1 << ":" << "ç”Ÿäº§çº¿" << x_result[i]+1 << std::endl;
 }
 
 bool RFirstIsSmaller(int Rx[][1], int R0[][1]) {

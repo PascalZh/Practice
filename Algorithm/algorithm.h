@@ -5,7 +5,7 @@
 #include <algorithm>
 using namespace std;
 
-// {{{ ·ÖÖÎ·¨½â¾ö±³°üÎÊÌâ
+// {{{ åˆ†æ²»æ³•è§£å†³èƒŒåŒ…é—®é¢˜
 /*2017.12.13 This is a complete failure. 
 struct CBagItem {
 	string name;
@@ -19,15 +19,15 @@ struct CBagItem {
 	CBagItem() :name(" "), weight(0), value(0) {}
 };
 struct CBag {
-	const int volume;//DEBUG: ÕâÀïµÄvolumeÔ­À´ÊÇÓÃÀ´±íÊ¾Ê£ÓàÄÜ×°µÄ¿Õ¼ä£¬µ«µİ¹é¹ı³ÌµÄÁ½¸ö·ÖÖ§¶¼»á¶ÔËüĞŞ¸Ä£¬ËùÒÔÓ¦¸ÃÓÃÒ»¸öintĞÍ²ÎÊı´«µİ£¬\
-	ÄÇÃ´Ã¿¸ö·ÖÖ§µÄ¼ÆËã²»»áÓ°ÏìÁË¡£\
-	ÏÖÔÚµÄvolume±íÊ¾±³°üµÄ×î´óÈİÁ¿£¬µ¥Î»ÊÇÖØÁ¿£¬²»¿ÉĞŞ¸Ä
+	const int volume;//DEBUG: è¿™é‡Œçš„volumeåŸæ¥æ˜¯ç”¨æ¥è¡¨ç¤ºå‰©ä½™èƒ½è£…çš„ç©ºé—´ï¼Œä½†é€’å½’è¿‡ç¨‹çš„ä¸¤ä¸ªåˆ†æ”¯éƒ½ä¼šå¯¹å®ƒä¿®æ”¹ï¼Œæ‰€ä»¥åº”è¯¥ç”¨ä¸€ä¸ªintå‹å‚æ•°ä¼ é€’ï¼Œ\
+	é‚£ä¹ˆæ¯ä¸ªåˆ†æ”¯çš„è®¡ç®—ä¸ä¼šå½±å“äº†ã€‚\
+	ç°åœ¨çš„volumeè¡¨ç¤ºèƒŒåŒ…çš„æœ€å¤§å®¹é‡ï¼Œå•ä½æ˜¯é‡é‡ï¼Œä¸å¯ä¿®æ”¹
 	vector<string> items;
 	CBag(int v) :volume(v), items() {}
 };
 int GetBestSchemeOfBagProblem(CBag &bag, const CBagItem items[],int size)
-{// int ·µ»ØÖµ±íÊ¾±³°üÖĞµÄ¼ÛÖµ
-	int max_value1,max_value2;//Ç°Õß±íÊ¾²»·Åµ±Ç°ÎïÆ·£¬ºóÕß·ÅÈëµ±Ç°ÎïÆ·
+{// int è¿”å›å€¼è¡¨ç¤ºèƒŒåŒ…ä¸­çš„ä»·å€¼
+	int max_value1,max_value2;//å‰è€…è¡¨ç¤ºä¸æ”¾å½“å‰ç‰©å“ï¼Œåè€…æ”¾å…¥å½“å‰ç‰©å“
 	if (size == 0 || bag.volume < items->weight)
 		return 0;
 

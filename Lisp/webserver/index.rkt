@@ -12,7 +12,7 @@
 (require xml)
 (require "../libcommon.rkt")
 (require "manipulate_db.rkt")
-(require "model_search.rkt")
+(require "models.rkt")
 
 (struct UserInfo (username admin))
 (define-values (dispatch url)
