@@ -8,15 +8,15 @@
 
 // 函数假定会求极小值
 
-const double *g_xi_1;
-const double *g_d_i;
+double *g_xi_1;
+double *g_d_i;
 function_t g_f;
 info_t g_info;
 
 answer_t PowellAlgo(function_t f,info_t info)
 {
-#define FOR(i, x) for (i = 0; i < dim; i++) { x }
-  g_f = f; g_info = info; g_info.dimension = 1;
+#define FOR(i__, x__) for (i__ = 0; i__ < dim; i__++) { x__ }
+  g_f = f; g_info = info;
   int i, j, k;
   
   double f_i_1;
@@ -28,10 +28,12 @@ answer_t PowellAlgo(function_t f,info_t info)
   answer_t ret;
 
   const int dim = info.dimension;
+  alpha_ans.minimum = malloc(sizeof(double) * dim);
   const double precision = info.precision;
 
   double *x0 = malloc(sizeof(double) * dim);
   double *xi = malloc(sizeof(double) * dim);
+  double *x0_old = malloc(sizeof(double) * dim);
   double **d = malloc(sizeof(double *) * dim);
   double *dn1 = malloc(sizeof(double) * dim);
   double *xn1 = malloc(sizeof(double) * dim);
@@ -44,9 +46,11 @@ answer_t PowellAlgo(function_t f,info_t info)
       d[i][i] = 1;
      );
   if (info.x0 != NULL) {
-    FOR(i,
-        x0[i] = info.x0[i];
-       );
+    FOR(i, x0[i] = info.x0[i];);
+  } else {
+    info.x0 = malloc(sizeof(double) * dim);
+    g_info.x0 = info.x0;
+    memset(info.x0, 0, dim);
   }
 
 
@@ -63,7 +67,7 @@ answer_t PowellAlgo(function_t f,info_t info)
         // fun1
         // 通过全局变量传递参数
         g_xi_1 = xi; g_d_i = d[i];
-        alpha_ans = gold_cut(fun1, g_info);
+        alpha_ans = gold_cut(fun1, &info);
         f_i = alpha_ans.value;
         alpha = *alpha_ans.minimum;
 
@@ -73,6 +77,7 @@ answer_t PowellAlgo(function_t f,info_t info)
         delta_i = f_i_1 - f_i;
         if (delta_i > delta_max) {delta_max = delta_i; m = i;}
        );
+    FOR(j, x0_old[j] = x0[j];);
 
     FOR(j, dn1[j] = xi[j] - x0[j]; xn1[j] = 2*xi[j] - x0[j];);
     F0 = f(x0, dim); F2 = f(xi, dim); F3 = f(xn1, dim);
@@ -81,7 +86,12 @@ answer_t PowellAlgo(function_t f,info_t info)
         (F0 - 2*F2 + F3) *
         SQUARE(F0 - F2 - delta_max)
         < 0.5 * delta_max * SQUARE(F0 - F3)) {
-      // TODO
+
+      // 此时xi已经算完，变成了xn
+      g_xi_1 = xi; g_d_i = dn1;
+      alpha_ans = gold_cut(fun1, &info);
+      FOR(j, x0[j] = xi[j] + (alpha_ans.minimum)[0] * dn1[j];);
+
       for (j = m; j < dim; j++) {
         if ( j == dim -1 ) {
           // 最后一个用dn+1补充
@@ -100,7 +110,7 @@ answer_t PowellAlgo(function_t f,info_t info)
     }
 
     k++;
-  } while( distance(xi, x0, dim) >= precision );
+  } while( distance(xi, x0_old, dim) >= precision );
 
   ret.minimum = x0;
   ret.value = F0;
@@ -119,10 +129,10 @@ double fun1(double *alpha, int dim)
   }
   return g_f(tmp, g_info.dimension);
 }
-answer_t gold_cut(function_t f, info_t info)
+answer_t gold_cut(function_t f, info_t *info)
 {
   answer_t ans;
-  if (info.dimension != 1) {perror("gold_cut: dimension is not 1!");}
+  ans.minimum = malloc(sizeof(double) * (*info).dimension);
   double a, b; // [a, b] 构成搜索区间
   jintui(f, &a, &b, info);
 
@@ -144,9 +154,10 @@ answer_t gold_cut(function_t f, info_t info)
       a1 = b - 0.618 * (b - a);
       y1 = f(&a1, 1);
     }
-  } while( fabs( (b - a) / b ) >= info.precision || fabs( (y2 - y1) / y2 ) >= info.precision );
+  } while( fabs( (b - a) / b ) >= (*info).precision && fabs( (y2 - y1) / y2 ) >= (* info ).precision );
   *ans.minimum = ( a + b ) / 2;
   ans.value = f(ans.minimum, 1);
+  printf("gold cut result: (x, f(x)) = (%lf, %lf)\n", *ans.minimum, ans.value);
   return ans;
 }
 
@@ -160,39 +171,26 @@ double distance(double *x1, double *x2, int dimension)
   return sqrt(ret);
 }
 
-void jintui(function_t f, double *a, double *b, info_t info)
+void jintui(function_t f, double *a, double *b, info_t *info)
 {
-  double t0,t1,t,h,f0,f1;
-  double alpha = 2;
-  int k=0;
-  t0 = *info.x0;
-  printf("\n请输入初始步长h=");
-  scanf("%lf",&h);
-  f0=f(&t0, 1);
-  t1=t0+h;
-  f1=f(&t1, 1);
-  while(1)
-  {
-    if(f1<f0)
-    {
-      h=alpha*h;
-      t=t0;
-      t0=t1;
-      f0=f1;
-      k++;
-    }
-    else
-    {
-      if(k==0)
-      {h=-h;t=t1;}
-      else
-      {
-        *a=t<t1?t:t1;
-        *b=t>t1?t:t1;
-        break;
-      }
-    }
-    t1=t0+h;
-    f1=f(&t1, 1);
+  double h = 10;
+  double a1 = 0; double a2 = a1 + h; double a3;
+  double y1 = f(&a1, 1);
+  double y2 = f(&a2, 1);
+  double y3;
+  if ( y2 > y1 ) {
+    h = -h;
+    a3 = a1; y3 = y1;
+a:
+    a1 = a2; y1 = y2; a2 = a3; y2 = y3;
   }
+  a3 = a2 + h; y3 = f(&a3, 1);
+  if (y3 < y2) {
+    h = 2*h;
+    goto a;
+  } else {
+    *a = a1 > a3?a3:a1;
+    *b = a1 > a3?a1:a3;
+  }
+  printf("jintuifa result: [%lf, %lf]\n", *a, *b);
 }

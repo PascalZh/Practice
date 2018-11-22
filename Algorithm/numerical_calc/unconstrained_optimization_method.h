@@ -16,7 +16,7 @@ typedef struct info_t_ {
 } info_t;
 
 answer_t PowellAlgo(function_t, info_t);
-answer_t gold_cut(function_t, info_t);
+answer_t gold_cut(function_t, info_t *);
 double fun1(double *alpha, int dim);
 double distance(double *x1, double *x2, int dimension);
-void jintui(function_t f, double *a, double *b, info_t info);
+void jintui(function_t f, double *a, double *b, info_t *info);

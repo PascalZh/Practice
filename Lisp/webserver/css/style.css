@@ -69,6 +69,10 @@ body {
   max-height: 100vh;
 }
 
+nav a {
+  outline: none;
+}
+
 #backtotop { /* back to top button */
 	position: fixed;
 	bottom: 5%; /* 小按钮到浏览器底边的距离 */

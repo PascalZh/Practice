@@ -253,24 +253,30 @@
     (close-input-port port)))
 
 
-(current-error-port (open-output-file "log/error.log" #:exists 'append))
-(current-output-port (open-output-file "log/output.log" #:exists 'append))
-(def request-output (open-output-file "log/request.log" #:exists 'append))
-(unless (directory-exists? "tmp")
-  (make-directory "tmp"))
-(serve/servlet start
-               #:port 8888
-               #:stateless? #t
-               #:servlet-path "/"
-               #:servlet-regexp #rx""
-               #:listen-ip #f
-               #:extra-files-paths
-               (list (build-path "."))
-               #:server-root-path "."
-               #:servlets-root "."
-               #:command-line? #t
-               #:log-file request-output
-               ;#:ssl? #t
-               ;#:ssl-cert "./server-cert.pem"
-               ;#:ssl-key "./private-key.pem"
-               )
+(module* main #f
+
+  (current-error-port (open-output-file "log/error.log" #:exists 'append))
+  (current-output-port (open-output-file "log/output.log" #:exists 'append))
+  (def request-output (open-output-file "log/request.log" #:exists 'append))
+
+  (unless (directory-exists? "tmp")
+    (make-directory "tmp"))
+
+  (thread (λ () (system "features/filter_request_log.py")))
+
+  (serve/servlet start
+                 #:port 8888
+                 #:stateless? #t
+                 #:servlet-path "/"
+                 #:servlet-regexp #rx""
+                 #:listen-ip #f
+                 #:extra-files-paths
+                 (list (build-path "."))
+                 #:server-root-path "."
+                 #:servlets-root "."
+                 #:command-line? #t
+                 #:log-file request-output
+                 ;#:ssl? #t
+                 ;#:ssl-cert "./server-cert.pem"
+                 ;#:ssl-key "./private-key.pem"
+                 ))
