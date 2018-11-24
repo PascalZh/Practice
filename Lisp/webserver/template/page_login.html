@@ -3,24 +3,6 @@
   window.onload = function() {
     document.getElementById("name1").focus();
   }
-
-<!--function checkForm()-->
-<!--{-->
-  <!--//判断用户名是否为空，不需要return-->
-  <!--if(document.login.username.value=="") {-->
-    <!--window.alert("用户名不能为空！");-->
-
-  <!--} else {-->
-    <!--//使用form对象的submit()方法，实现提交，不用return-->
-    <!--console.log($.fn.jquery);-->
-    <!--var user = $('#name1');-->
-    <!--var pwd = $('#pwd1');-->
-
-    <!--var hash = $.md5(pwd.val());-->
-    <!--pwd.val(hash);-->
-    <!--document.login.submit();-->
-  <!--}-->
-<!--}-->
 </script>
 
 <div class="login-box">
@@ -68,5 +50,4 @@ $('#login').on('submit', function(e){
     // 这样就会导致表单根本没有被发送到服务器，以致登录失败
     window.location.href = '/login?' + 'username='+user.val() + '&userpwd=' + hash + '&refresh=' + Math.random();
 })
-
 </script>

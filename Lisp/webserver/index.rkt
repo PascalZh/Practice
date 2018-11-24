@@ -13,8 +13,11 @@
 (require "../libcommon.rkt")
 (require "manipulate_db.rkt")
 (require "models.rkt")
+(require "features/Go.rkt")
 
 (struct UserInfo (username admin))
+(def eng #f)
+
 (define-values (dispatch url)
   (dispatch-rules
     [("") render/response-index]
@@ -28,6 +31,8 @@
     [("login") render/response-login]
 
     [("test" (string-arg) ...) render/response-test]
+
+    [("Go" (string-arg) ...) render/response-Go]
     ))
 
 (def (start request)
@@ -129,12 +134,14 @@
                                 (query-account (client-cookie-name c)
                                                (client-cookie-value c)))
                               client-cookies)])
-    ; 如果是管理员，就设置login-content
-    (when (and login-cookie
+    ; 如果是管理员
+    (if (and login-cookie
                (= 1 (query-account
                       (client-cookie-name login-cookie)
                       (client-cookie-value login-cookie))))
-      (set! login-content (render-admin-login-content))))
+      (set! login-content (render-admin-login-content))
+      ; 不是管理员的话永远都看不到
+      (set! carousel? #f)))
 
   ; 由于render/response-esp32和render/response-index ... 都要调用这个函数
   ; 而且搜索功能应该在两个页面中都能使用，所以在这里设置搜索页面
@@ -237,6 +244,16 @@
               ))))]))
 ; }}}
 
+; Go {{{
+(def (render/response-Go request path)
+  (cond
+    [(and (string=? (car path) "play")
+          (= (length path) 2))
+     (let ([n (next-move (cadr path) eng)])
+       (response/xexpr n))]))
+; }}}
+
+
 (def (make-login-cookie name pwd)
   (make-cookie
     name pwd
@@ -253,10 +270,11 @@
     (close-input-port port)))
 
 
+(set! eng (init-engine 'leelaz))
 (module* main #f
 
-  (current-error-port (open-output-file "log/error.log" #:exists 'append))
-  (current-output-port (open-output-file "log/output.log" #:exists 'append))
+  ;(current-error-port (open-output-file "log/error.log" #:exists 'append))
+  ;(current-output-port (open-output-file "log/output.log" #:exists 'append))
   (def request-output (open-output-file "log/request.log" #:exists 'append))
 
   (unless (directory-exists? "tmp")

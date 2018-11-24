@@ -8,8 +8,7 @@ if (screen_shot_btn) {
 var screen_shot_tbody = document.getElementById("screen_shot_list");
 var flagGetList = false
 
-var xmlhttp;
-xmlhttp=new XMLHttpRequest();
+var xmlhttp=new XMLHttpRequest();
 
 // 登录后删除Login按钮
 if ($('#admin_img').length != 0) {

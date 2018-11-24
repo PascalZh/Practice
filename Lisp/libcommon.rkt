@@ -1,7 +1,9 @@
 #lang racket
+(require racket/date)
 (provide def len average pow even? square)
 (provide csv-take sh)
 (provide mapmap build-mlist mlist-ref)
+(provide LOGI LOGW LOGE)
 
 (define-syntax def
   (syntax-rules ()
@@ -32,6 +34,32 @@
   (if (= n 0)
     (mcar mlst)
     (mlist-ref (mcdr mlst) (n . - . 1))))
+
+(def (LOGI tag message)
+  (display-time)(displayln "")
+  (display "(I)")(display tag)(display ":")
+  (println message))
+
+(def (LOGW tag message)
+  (display-time)(displayln "")
+  (display "(W)")(display tag)(display ":")
+  (println message))
+
+(def (LOGE tag message)
+  (display-time)(displayln "")
+  (display "(E)")(display tag)(display ":")
+  (println message))
+
+(def (display-time)
+  (def d (current-date))
+  (date-display-format 'iso-8601)
+  (display (date->string d)) (display " ")
+  (display (string-append
+             (number->string (date-hour d))
+             ":"
+             (number->string (date-minute d))
+             ":"
+             (number->string (date-second d)))))
 
 ; math {{{
 
