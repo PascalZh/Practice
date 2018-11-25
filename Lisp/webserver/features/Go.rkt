@@ -10,12 +10,18 @@
     ; wA2 对应GTPv2的'w A2'命令，但是符号要求要比GTPv2严格
     [next-move (string? engine? . -> . string?)]
     [write-gtp (string? engine? . -> . any)]
-    [read-gtp (engine? . -> . string?)]))
+    [read-gtp (engine? . -> . string?)]
+    [struct engine ((name symbol?)
+                    (in input-port?)
+                    (out output-port?)
+                    (err input-port?)
+                    (pid integer?)
+                    (ctrl procedure?))]))
 
 (module+ test
   (require rackunit))
 
-(struct engine (in out err pid ctrl))
+(struct engine (name in out err pid ctrl) #:transparent)
 
 (def (init-engine name)
   (cond [(eq? name 'leelaz)
@@ -26,7 +32,7 @@
          (displayln "init engine leela zero...")
          (def l (process/ports p_out p_in p_err
                                "~/program_files/leela-zero/build/leelaz --cpu-only -w ~/program_files/leela-zero/build/best-network --gtp -t 4 --noponder -p 1"))
-         (engine in out err (list-ref l 2) (list-ref l 4))]))
+         (engine 'leelaz in out err (list-ref l 2) (list-ref l 4))]))
 
 (def (next-move coordinate eng)
   (when (eq? 'running ((engine-ctrl eng) 'status))
@@ -40,11 +46,10 @@
       (write-gtp cmd eng)
       (def r1 (read-gtp eng))
       (if (string=? "?" (string (string-ref r1 0)))
-        r1
+        (substring r1 2)
         (begin
           (write-gtp (string-append "genmove " color-rev) eng)
-          (string-append color-rev
-                         (substring (read-gtp eng) 2)))))))
+          (substring (read-gtp eng) 2))))))
 
 (module+ test
   (def eng (init-engine 'leelaz))

@@ -16,7 +16,13 @@
 (require "features/Go.rkt")
 
 (struct UserInfo (username admin))
+
+; 引擎同时只支持开一个，所以围棋同时只支持一个人在线
 (def eng #f)
+(def current-player #f)
+
+(def (set-engine! eng_) 
+  (set! eng eng_))
 
 (define-values (dispatch url)
   (dispatch-rules
@@ -247,10 +253,42 @@
 ; Go {{{
 (def (render/response-Go request path)
   (cond
-    [(and (string=? (car path) "play")
-          (= (length path) 2))
-     (let ([n (next-move (cadr path) eng)])
-       (response/xexpr n))]))
+    ; start 负责开启engine
+    [(string=? (car path) "start")
+     (let
+       ([player_name (cadr path)]
+        [engine_name (string->symbol (caddr path))])
+       (if (not eng)
+         (set-engine! (init-engine engine_name))
+         (when (not (eq? engine_name (engine-name eng)))
+           ((engine-ctrl eng) 'kill)
+           (set-engine! (init-engine engine_name))))
+       (if (not current-player)
+         (begin
+           (set! current-player player_name)
+           (response/xexpr "start ok"))
+         (response/xexpr current-player)))]
+
+    [(string=? (car path) "play")
+     (if (not eng)
+       (response/xexpr "no engine")
+       (let ([n (next-move (cadr path) eng)])
+         (response/xexpr n)))]
+
+    [(string=? (car path) "clear_board")
+     (write-gtp "clear_board" eng)
+     (let ([ret (read-gtp eng)])
+       (if (string=? "= " ret)
+         (response/xexpr "clear_board ok")
+         (response/xexpr ret)))]
+
+    ; stop 负责关闭engine
+    [(string=? (car path) "stop")
+     (set! current-player #f)
+     ((engine-ctrl eng) 'kill)
+     (set! eng #f)
+     (response/xexpr "stop ok")]
+    ))
 ; }}}
 
 
@@ -269,8 +307,6 @@
     (read port)
     (close-input-port port)))
 
-
-(set! eng (init-engine 'leelaz))
 (module* main #f
 
   ;(current-error-port (open-output-file "log/error.log" #:exists 'append))
