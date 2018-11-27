@@ -8,6 +8,7 @@
     ;; 暂时不考虑时间的问题，根据这一步的来计算下一步
     ; 每一步用一个符号表示，对应GTPv2协议
     ; wA2 对应GTPv2的'w A2'命令，但是符号要求要比GTPv2严格
+    ; next-move 会自动调用show_board
     [next-move (string? engine? . -> . string?)]
     [write-gtp (string? engine? . -> . any)]
     [read-gtp (engine? . -> . string?)]
@@ -16,7 +17,8 @@
                     (out output-port?)
                     (err input-port?)
                     (pid integer?)
-                    (ctrl procedure?))]))
+                    (ctrl procedure?))]
+    [find-board (input-port? . -> . list?)]))
 
 (module+ test
   (require rackunit))
@@ -35,6 +37,7 @@
          (engine 'leelaz in out err (list-ref l 2) (list-ref l 4))]))
 
 (def (next-move coordinate eng)
+  (def ret #f)
   (when (eq? 'running ((engine-ctrl eng) 'status))
     (let*
       ([str coordinate]
@@ -45,11 +48,15 @@
       
       (write-gtp cmd eng)
       (def r1 (read-gtp eng))
-      (if (string=? "?" (string (string-ref r1 0)))
-        (substring r1 2)
+      (if (or (string=? "?" (string (string-ref r1 0)))
+              (not (string=? "= " r1)))
+        (set! ret (substring r1 2))
         (begin
           (write-gtp (string-append "genmove " color-rev) eng)
-          (substring (read-gtp eng) 2))))))
+          (set! ret (substring (read-gtp eng) 2)))))
+    (write-gtp "showboard" eng)
+    (read-gtp eng)
+    ret))
 
 (module+ test
   (def eng (init-engine 'leelaz))
@@ -70,3 +77,25 @@
 (def (write-gtp cmd eng)
   (when (eq? 'running ((engine-ctrl eng) 'status))
     (displayln cmd (engine-out eng))))
+
+(def (find-board err)
+  ; parse-board-line 返回一行的旗子
+  ; 第一个为纵坐标，其他的为横坐标
+  ; '(12 ('B 1 3) ('W 4 5) ('current 4))
+  (def (parse-board-line n)
+    (let ([l (read-line err)])
+      (list (- 19 n)
+            (cons 'B (map (λ (pair) (((car pair) . - . 1) . / . 2))
+                   (regexp-match-positions* #rx"X" l)))
+            (cons 'W (map (λ (pair) (((car pair) . - . 1) . / . 2))
+                   (regexp-match-positions* #rx"O" l)))
+            (cons 'current (map (λ (pair) ((car pair) . / . 2))
+                   (regexp-match-positions* #rx"\\(" l))))))
+  (def (loop)
+    (let ([l (read-line err)])
+      (if (regexp-match #rx"a b c d e" l)
+        (let ([ret (build-list 19 parse-board-line)])
+          (when (regexp-match #rx"a b c d e" (read-line err))
+            ret))
+        (loop))))
+  (loop))

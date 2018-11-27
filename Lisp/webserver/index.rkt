@@ -253,41 +253,64 @@
 ; Go {{{
 (def (render/response-Go request path)
   (cond
+    ; 负责人机交战的逻辑 {{{
     ; start 负责开启engine
-    [(string=? (car path) "start")
+    [(and (string=? (car path) "start")
+          (= (len path) 3))
      (let
        ([player_name (cadr path)]
         [engine_name (string->symbol (caddr path))])
        (if (not eng)
          (set-engine! (init-engine engine_name))
          (when (not (eq? engine_name (engine-name eng)))
+           (print engine_name)
+           (print (engine-name eng))
            ((engine-ctrl eng) 'kill)
            (set-engine! (init-engine engine_name))))
        (if (not current-player)
          (begin
            (set! current-player player_name)
            (response/xexpr "start ok"))
-         (response/xexpr current-player)))]
+         (response/xexpr
+           (string-append "unfinished play:" current-player))))]
 
-    [(string=? (car path) "play")
+    [(and (string=? (car path) "play")
+          (= (len path) 2))
      (if (not eng)
        (response/xexpr "no engine")
-       (let ([n (next-move (cadr path) eng)])
-         (response/xexpr n)))]
+       (let ([n (next-move (cadr path) eng)]
+             [board (with-output-to-string
+                      (λ () (print (find-board (engine-err eng)))))])
+         (response/xexpr (string-append n board))))]
 
-    [(string=? (car path) "clear_board")
-     (write-gtp "clear_board" eng)
-     (let ([ret (read-gtp eng)])
-       (if (string=? "= " ret)
-         (response/xexpr "clear_board ok")
-         (response/xexpr ret)))]
+    [(and (string=? (car path) "clear_board")
+          (= (len path) 1))
+     (if (not eng)
+       (response/xexpr "no engine")
+       (begin
+         (write-gtp "clear_board" eng)
+         (let ([ret (read-gtp eng)])
+           (if (string=? "= " ret)
+             (response/xexpr "clear_board ok")
+             (response/xexpr ret)))))]
 
     ; stop 负责关闭engine
-    [(string=? (car path) "stop")
-     (set! current-player #f)
-     ((engine-ctrl eng) 'kill)
-     (set! eng #f)
-     (response/xexpr "stop ok")]
+    [(and (string=? (car path) "stop")
+          (= (len path) 1))
+     (if (not eng)
+       (response/xexpr "no engine")
+       (begin
+         (set! current-player #f)
+         ((engine-ctrl eng) 'kill)
+         (set! eng #f)
+         (response/xexpr "stop ok")))]
+    ; }}}
+
+    ; 负责机器与机器交战的逻辑
+    ; 由于机器与机器交战不需要复杂的逻辑（只需要你一步我一步地下棋）
+    ; 所以可以直接将url直接解析成gtp协议的命令（空格替换成斜杠）
+    [(string=? (car path) "gtp")
+     (response/xexpr "gtp not supported")]
     ))
 ; }}}
 

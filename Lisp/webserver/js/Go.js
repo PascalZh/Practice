@@ -1,38 +1,72 @@
-var FiveChesscanvas = document.getElementById('ChessCanvas');
-var context = FiveChesscanvas.getContext('2d');
+let FiveChesscanvas = document.getElementById('ChessCanvas');
+let context = FiveChesscanvas.getContext('2d');
 // has_stone 标记棋盘上是否有棋子
 // 没有:0白子:1黑子:2
-var flag_none = 0; var flag_white = 1; var flag_black = 2;
-var has_stone = [];
-var is_me = true;
-var is_me_white = false;
-var is_over = false;
-var chess_http = new XMLHttpRequest();
-
+const flag_none = 0; const flag_white = 1; const flag_black = 2;
+let has_stone = [];
+let is_me = false;
+let is_me_white = false;
+let is_over = false;
+let chess_http = new XMLHttpRequest();
 // 用来把字母横坐标映射成数
-var map_a2n = 'ABCDEFGHJKLMNOPQRST'.split('')
+let map_a2n = 'ABCDEFGHJKLMNOPQRST'.split('')
 
-DrawChessBoard();
-for(var i=0; i<19; i++) {
+drawChessBoard();
+for(let i=0; i<19; i++) {
   has_stone[i] = [];
-  for(var j=0; j<19; j++) {
+  for(let j=0; j<19; j++) {
     has_stone[i][j] = 0;
   }
+}
+
+function onChessStart() {
+  clearBoard();
+  let leelaz = $('#leelaz').val();
+  if (leelaz == 'on') {
+    let player_id = getPlayerId();
+    chess_http.open('GET', `/Go/start/${player_id}/leelaz`);
+    chess_http.send();
+  }
+}
+
+function clearBoard() {
+  for(let i=0; i<19; i++) {
+    for(let j=0; j<19; j++) {
+      has_stone[i][j] = 0;
+    }
+  }
+  // 清空画布
+  context.clearRect(0,0,630,630);
+  drawChessBoard();
+}
+
+function getPlayerId() {
+  return 'foo';
+}
+
+function onChessStop() {
+  chess_http.open('GET', '/Go/stop');
+  chess_http.send();
+}
+
+function onChessRestart() {
+  chess_http.open('GET', '/Go/clear_board');
+  chess_http.send();
 }
 
 function isWhite() {
   return is_me_white? is_me: !is_me;
 }
 
-function DrawChessBoard() {
+function drawChessBoard() {
   context.beginPath();
-  for(var i=0; i<19; i++) {
+  for(let i=0; i<19; i++) {
     context.moveTo(15+30, 15+30*i+30);
     context.lineTo(15+30*18+30, 15+30*i+30);
     context.moveTo(15+30*i+30, 15+30);
     context.lineTo(15+30*i+30, 15+30*18+30);
   }
-  context.strokeStyle = "#666";
+  context.lineWidth = 1; context.strokeStyle = "#666";
   context.stroke();
   context.closePath();
 
@@ -50,8 +84,9 @@ function DrawChessBoard() {
 }
 
 function drawCoordinates(context) {
+  context.strokeStyle = "#000";
   context.font = '10px Verdana';
-  for(var i=0; i<19; i++) {
+  for(let i=0; i<19; i++) {
     context.fillText(map_a2n[i], 42+i*30, 25);
     context.fillText(map_a2n[i], 42+i*30, 70+30*18);
     context.fillText(19-i, 13, 48+i*30);
@@ -66,40 +101,50 @@ function drawSign(i, j, context_) {
   context_.lineTo(15+30*i+30, 15+30*j+15+30)
 }
 
-function oneStep(i, j) {
-  context.beginPath();
-  context.arc(30*i+15+30, 30*j+15+30, 13, 0, Math.PI*2);
-  var gradient = context.createRadialGradient(30*i+15+30, 30*j+15+30, 13, 30*i+15+30, 30*j+15+30, 0);
-  if(isWhite()) {
-    gradient.addColorStop(0, "#b1b1b1");
-    gradient.addColorStop(1, "#f9f9f9");
-  }
-  else {
-    gradient.addColorStop(0, "#0a0a0a");
-    gradient.addColorStop(1, "#636766");
-  }
-  context.fillStyle = gradient;
-  context.fill();
-  context.closePath();
+function oneStep() {
+  context.clearRect(0,0,630,630);
+  drawChessBoard();
+  for (let i = 0; i < 19; i++)
+    for (let j = 0; j < 19; j++) {
+      if(has_stone[i][j] == flag_white) {
+        context.beginPath();
+        context.arc(30*i+15+30, 30*j+15+30, 13, 0, Math.PI*2);
+        let gradient = context.createRadialGradient(30*i+15+30, 30*j+15+30, 13, 30*i+15+30, 30*j+15+30, 0);
+        gradient.addColorStop(0, "#b1b1b1");
+        gradient.addColorStop(1, "#f9f9f9");
+        context.fillStyle = gradient;
+        context.fill();
+        context.closePath();
+      }
+      else if (has_stone[i][j] == flag_black) {
+        context.beginPath();
+        context.arc(30*i+15+30, 30*j+15+30, 13, 0, Math.PI*2);
+        let gradient = context.createRadialGradient(30*i+15+30, 30*j+15+30, 13, 30*i+15+30, 30*j+15+30, 0);
+        gradient.addColorStop(0, "#0a0a0a");
+        gradient.addColorStop(1, "#636766");
+        context.fillStyle = gradient;
+        context.fill();
+        context.closePath();
+      }
+    }
 }
 
-FiveChesscanvas.onclick = function(e) {
-  var x = e.offsetX;
-  var y = e.offsetY;
-  var i = Math.floor(x/30)-1;
-  var j = Math.floor(y/30)-1;
+FiveChesscanvas.onclick = (e)=>{
+  let x = e.offsetX;
+  let y = e.offsetY;
+  let i = Math.floor(x/30)-1;
+  let j = Math.floor(y/30)-1;
   if(i>=0 && j>=0 &&
     has_stone[i][j] == flag_none &&
     is_me) {
 
-    oneStep(i, j);
+    has_stone[i][j] = isWhite()? flag_white: flag_black;
+    oneStep();
 
-    var url_ = "/Go/play/b"
+    let url_ = "/Go/play/b"
     if (isWhite()) {
       url_ = "/Go/play/w"
     }
-
-    has_stone[i][j] = isWhite()? flag_white: flag_black;
 
     url_ += map_a2n[i] + (19 - j).toString();
     console.log("onclick: get: url:" + url_);
@@ -109,25 +154,60 @@ FiveChesscanvas.onclick = function(e) {
   }
 }
 
-var reMove = /[ABCDEFGHJKLMNOPQRST][1-19]/
-chess_http.onreadystatechange = function() {
+chess_http.onreadystatechange = ()=>{
   if (chess_http.readyState==4 && chess_http.status==200)
   {
-    var i, j;
-    var ret = chess_http.responseText;
+    let ret = chess_http.responseText;
     console.log("receive from /Go:" + ret);
 
-    if (reMove.test(ret)) {
-      i = map_a2n.findIndex(function(v) {
-        return v==ret.slice(0,1)});
-      j = 19 - Number(ret.slice(1));
-      has_stone[i][j] = isWhite()? flag_white: flag_black;
-      oneStep(i, j);
+    if (/[ABCDEFGHJKLMNOPQRST]([1-9]|1\d)/.test(ret)) {
+
+      for (let i = 0; i < 19; i++)
+        for (let j = 0; j < 19; j++)
+          has_stone[i][j] = flag_none;
+
+      for (let k = 0; k < 19; k++) {
+        let k_ = k+1;
+        let line = ret.match(RegExp(`\\(${k_} \\(B( \\d{1,2})*\\) \\(W( \\d{1,2})*\\) \\(current( \\d{1,2})*\\)\\)`));
+        if (!line) {
+          alert("line is null!");
+        } else {
+          let str = line[0];
+          let str_B = str.match(/\(B( \d{1,2})*\)/)[0];
+          let str_W = str.match(/\(W( \d{1,2})*\)/)[0];
+          let ind_B = str_B.match(/\b\d{1,2}\b/g)
+          let ind_W = str_W.match(/\b\d{1,2}\b/g)
+          if (ind_B) {
+            ind_B.map((str)=>{
+              let i = Number(str) - 1;
+              let j = 19 - k_;
+              has_stone[i][j] = flag_black;
+            });
+          }
+          if (ind_W) {
+            ind_W.map((str)=>{
+              let i = Number(str) - 1;
+              let j = 19 - k_;
+              has_stone[i][j] = flag_white;
+            });
+          }
+        }
+      }
+      oneStep();
       // 恢复点击，继续下棋
       is_me = true;
 
     } else if (/start ok/.test(ret)) {
-      ;
+      is_me = true;
+    } else if (/unfinished play:.*/.test(ret)) {
+      alert("引擎已经启动！请重新开始或者继续对决");
+    } else if (/stop ok/.test(ret)) {
+      is_me = false;
+    } else if (/clear_board ok/.test(ret)) {
+      is_me = true;
+      clearBoard();
+    } else if (/no engine/.test(ret)) {
+      alert("没有启动引擎！");
     }
   }
-}
+};
