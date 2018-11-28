@@ -1,12 +1,29 @@
 #! /usr/bin/env racket
 #lang racket
 (require "../Lisp/libcommon.rkt")
+(require "csv-reading")
 
-(provide make-network apply-network final-output train)
+(provide make-network apply-network final-output
+         (contract-out [train (path? path? list? . -> . list?)]))
 (provide set-train-times)
-(provide set-α set-min-part)
+(provide set-α set-batch-size)
 (provide ntw-layer ntw-node ntw-w add-network)
 (provide transpose sigmoid dot-prod scale remove-head remove-tail)
+
+(def make-data-reader
+     (make-csv-reader-maker
+       '((separator-chars            #\,)
+         (strip-leading-whitespace?  . #t)
+         (strip-trailing-whitespace? . #t))))
+
+(def (row->label row)
+  (def (iter num i res)
+    (if (= i 0)
+      (reverse res)
+      (if (= (- 10 num) i)
+        (iter num (- i 1) (cons 1 res))
+        (iter num (- i 1) (cons 0 res)))))
+  (iter (string->number (first row) 10 null)))
 
 ; train-bp1 {{{
 ; 根据wikipedia的公式而写
@@ -42,7 +59,7 @@
   ; }}}
 
   ; get-Δw {{{
-  (def former-Δw 0)
+  (def former-Δw #f)
   (def (get-Δw o t_ ntw)
     ;(displayln (get-Δw (remove-head o) t_ (remove-head ntw)))
     (if (not (pair? former-Δw))
@@ -69,23 +86,17 @@
 
   ; new-network {{{
   ; t_ should be numbers; o should be result of apply-network
-  (def (new-network o t_ ntw)
-    ;(displayln (get o t_ ntw))
-    ;(displayln o)
-    ;(displayln t_)
-    ;(displayln ntw)
-    (let ([Δw (get-Δw o t_ ntw)])
-      (set! former-Δw Δw)
-      ;(displayln ntw)
-      ;(displayln (caaar   Δw ))
-      ;(newline)
-      ;(displayln (add-network network Δw))
-      ;(sleep 3)
-      (add-network ntw Δw))) ;!!!I spent 2 days to find that I write (add-network network Δw) mistakenly!!!
+  ; ntw is a mpair, [a,b) is the range of i_ and t_ that will be used.]
+  (def (new-network i_ t_ ntw a b)
+    (let* ([_i (take (take-right i_ a) (- b a))]
+           [_t (take (take-right t_ a) (- b a))]
+           [o (apply-network _i network #:act-f af)]
+           [Δw (get-Δw o _t network)])
+      (set-mcar! ntw Δw)))
   ; }}}
 
   ; analyze-error {{{
-  (def (analyze-error i_ t_ ntw count_part count_)
+  (def (analyze-error i_ t_)
     (let
       ([mean-error  ; errr = 1/2 * (y - t)^2
          (average
@@ -95,87 +106,48 @@
                 i_
                 t_))]
        [abs-error null])
-      (when (= (remainder count_part (max 1 (quotient len_part show-part-num)))
-               0)
-        (when (= (remainder count_ (max 1 (quotient max-train-times show-err)))
-                 0)
-          (display "Train No. ") (display count_)
-          (display "\tPart No. ")
-          (display count_part)
-          (display " (")
-          (display (/ (round (* 10000 (/ count_part len_part))) 100.0))
-          (display "%)")
-          (display "\tmean error: ") (displayln mean-error)))
-      mean-error))
+      (display "Train No. ") (display (+ 1 (- old-max-train-times max-train-times)))
+      (display "\tmean error: ") (displayln mean-error)))
   ; }}}
 
-  ; iter {{{
-  ; train one time for all inputs
-  (def (iter i_ t_ ntw)
-    ;(displayln ntw)
-    ;(sleep 1)
-    (if (null? i_)
-      ntw
-      (iter (cdr i_) (cdr t_)
-            (new-network (apply-network (car i_) ntw #:act-f af)
-                         (car t_)
-                         ntw))))
-  ; }}}
+  ; multi-threaded
+  (def tmp-ntw (mcons #f (mcons #f (mcons #f (mcons #f null)))))
+  (def (train-batch i_ t_)
+    (def b1 (round (/ batchsize 4)))
+    (def b2 (round (* 2 (/ batchsize 4))))
+    (def b3 (round (* 3 (/ batchsize 4))))
+    (def thd0 (thread (λ () (new-network i_ t_ tmp-ntw 0 b1))))
+    (def thd1 (thread (λ () (new-network i_ t_ (mcdr tmp-ntw) b1 b2))))
+    (def thd2 (thread (λ () (new-network i_ t_ (mcdr (mcdr tmp-ntw)) b2 b3))))
+    (def thd3 (thread (λ () (new-network i_ t_ (mcdr (mcdr (mcdr tmp-ntw))) b3 batch-size))))
+    (thread-wait thd0)(thread-wait thd1)(thread-wait thd2)(thread-wait thd3)
+    (set! network (add-network
+                    network
+                    (add-network
+                      (mcar tmp-ntw)
+                      (add-network
+                        (mcadr tmp-ntw)
+                        (add-network (mcaddr tmp-ntw) (mcadddr tmp-ntw))))))
+    (analyze-error i_ t_))
+  
+  (def old-max-train-times max-train-times)
+  (def (loop)
+    (if (= max-train-times 0)
+      null
+      (begin
+        (def reader-i (make-data-reader (open-input-file input)))
+        (def reader-t (make-data-reader (open-input-file t)))
+        (let ([i_ (csv-take reader-i batch-size)]
+              [t_ (map row->label (csv-take reader-t batch-size))])
+          (when (< (len i_) batch-size)
+            (set! max-train-times (- max-train-times 1))
+            (set! batch-size (len i_)))
+          (if (< batch-size 4)
+            null
+            (train-batch i_ t_))))))
+  (loop)
+  network)
 
-  ; (loop-part i-p t-p ntw count_part) {{{
-  (def former-m-e 0)
-  (def (loop-part i-p t-p ntw count_part count_)
-    (if (null? i-p)
-      ntw
-      (let* ([t_ (car t-p)]
-             [i_ (car i-p)]
-             [mean-error (analyze-error i_ t_ ntw count_part count_)])
-        (if (< (abs (- mean-error former-m-e)) p)
-          ntw
-          (begin 
-            (set! former-m-e mean-error)
-            (set! former-Δw 0)
-            (loop-part (cdr i-p) (cdr t-p) (iter i_ t_ ntw) (+ count_part 1) count_))))))
-  ; }}}
-
-  ; (loop i-p t-p ntw count_) {{{
-  (def (loop i-p t-p ntw count_)
-    (if (= count_ max-train-times)
-      ntw
-      (loop i-p t-p (loop-part i-p t-p ntw 0 count_) (+ count_ 1))))
-  ; }}}
-
-  ; (part d){{{
-  (def (part d)
-    (def (iter d_ res)
-      (if (< (len d_) (* min-part 1.3))
-        (cons d_ res)
-        (iter (drop d_ min-part) (cons (take d_ min-part) res))))
-    (iter d null))
-  ; }}}
-
-  ; (preprocess input t ntw) {{{
-  (def len_part 0)
-  (def (preprocess input t ntw)
-    (def i-p (part input))
-    (def t-p (part t))
-    (set! len_part (len i-p))
-    (display "data have been parted into ")
-    (display len_part) (displayln " parts:")
-    (map (λ (part) (display (len part)) (display " ")) i-p)
-    (newline) (newline)
-    ;(displayln i-p)
-    ;(displayln t-p)
-    ;(def (iter i_ t_ ntw)
-    ;(if (null? i_)
-    ;ntw
-    ;(iter (cdr i_) (cdr t_)
-    ;(loop (car i_) (car t_) ntw 0))))
-    ;(iter i-p t-p network)
-    (loop i-p t-p ntw 0))
-  ; }}}
-
-  (cons 'bp1 (preprocess input t network)))
 ; }}}
 
 ; network API {{{
@@ -185,13 +157,13 @@
 (def show-err 100) 
 (def show-part-num 100)
 (def α 0.5)
-(def min-part 50)
+(def batch-size 50)
 ;; 每个神经元都假定与前一层的全部神经元相连
 ;; 构造出来的网络实际上是权值(w)
 (def (set-train-times n) (set! max-train-times n))
 ;(def (set-show-err n) (set! show-err n))
 (def (set-α α_) (set! α α_))
-(def (set-min-part x) (set! min-part x))
+(def (set-batch-size x) (set! batch-size x))
 
 (def (ntw-layer ntw n-layer)
   (if (eq? (car ntw) 'bp1)
