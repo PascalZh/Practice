@@ -8,12 +8,16 @@
     [(def id1 id2 ...)
      (define id1 id2 ...)]))
 
+; 若x多于reader中剩余的行数，那么就会把剩余所有的行都提取出来
+; 此时行数小于x
+; 若reader已经没有数据，那么直接返回'()
 (def (csv-take reader x)
-  (def (iter lst count_)
-    (if (= count_ 0)
-      lst
-      (iter (cons (reader) lst) (count_ . - . 1))))
-  (reverse (iter null x)))
+  (def (iter count_)
+    (let ([row (reader)])
+      (if (or (= count_ 0) (null? row))
+        null
+        (cons row (iter (- count_ 1))))))
+  (iter x))
 
 (def len length)
 (def (mapmap proc arg)

@@ -4,27 +4,25 @@
 (require "../Lisp/libcommon.rkt")
 (require "bp_ann.rkt")
 
-; (start-workflow samples labels t-samples t-labels) {{{
 (def (start-workflow samples labels t-samples t-labels)
   ; t- affix refer to test-
 
   (let* ([num-input (* 28 28)]
          [num-output 10]
          [ntw-struct (calc-ntw-struct num-input num-output)])
-    (def lr 0.6)
-    (set-batch-size 50)
-    (set-train-times 5)
+    (def lr 0.1)
+    (set-batch-size 60)
+    (set-train-times 3)
     (displayln "network neuron numbers per layer (input layer on the far left): ")
     (displayln ntw-struct)
     (display "learning rate: ") (displayln lr)
-    (newline) (displayln "train starting...") (newline) 
+    (displayln "train starting...")
 
     (def ntw (make-network ntw-struct))
     (set! ntw (train samples labels ntw #:learning-rate lr))
-    ;(analyze-result t-samples t-labels ntw)
+    (analyze-result (csv->data t-samples) (csv->label t-labels) ntw)
 
     (void)))
-; }}}
 
 (def make-data-reader
      (make-csv-reader-maker
@@ -40,6 +38,25 @@
         (iter num (- i 1) (cons 0 res)))))
   (iter (string->number (first row) 10 null)))
 
+; (csv->data str) {{{
+(def (csv->data str)
+     (csv-map (lambda (row)
+                (map string->number row))
+              (make-data-reader (open-input-file str))))
+; }}}
+; (csv->label str) {{{
+(def (csv->label str)
+     (def (iter one i res)
+          (if (= i 0)
+              (reverse res)
+              (if (= (- 10 one) i)
+                  (iter one (- i 1) (cons 1 res))
+                  (iter one (- i 1) (cons 0 res)))))
+     (csv-map (lambda (row)
+                (iter (string->number (first row)) 10 null))
+              (open-input-file str)))
+; }}}
+
 (def train-images "./dataset/train-images.csv")
 (def train-labels "./dataset/train-labels.csv")
 (def t-images "./dataset/test-images.csv")
@@ -48,13 +65,11 @@
 (def (calc-ntw-struct n-i n-o)
   (list n-i
         (inexact->exact (round (+ 5
-                                  (sqrt (* n-i n-o)))))
+                                  (sqrt (+ n-i n-o)))))
         n-o))
 
 ; (analyze-result ntw test-samples test-labels) {{{
 (def (analyze-result test-samples test-labels ntw)
-  (set! test-samples (csv->list test-samples))
-  (set! test-labels (csv-map row->label test-labels))
   (newline)
   (displayln "train finished...")
   (newline) (displayln "test starting...") (newline)
