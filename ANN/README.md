@@ -46,8 +46,8 @@ I try to use this simple bp neural network to recognize handwritten numbers. Eve
 I choose **SGD** (stochastic gradient decreasing) to update the weight values. So the network will converge very soon but perhaps converge to local optimum solution (this is true for 2.log).
 
 #### Step 5: **BGD** instead of **SGD**
-Add multi-thread support with `future` in the racket.
 Use **BGD** instead of **SGD**.
+It converges to a stable network very soon, but the rate of success is very low (0.1135).
 
 **file explanation:**
 + *1.log* is the output of program that runs for a day.

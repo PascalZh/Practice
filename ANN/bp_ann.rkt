@@ -1,8 +1,8 @@
 #! /usr/bin/env racket
 #lang racket
 (require "../Lisp/libcommon.rkt")
-(require racket/future)
 (require csv-reading)
+(require racket/fasl)
 
 (provide make-network apply-network final-output
          (contract-out [train (->* (string? string? list?) (#:learning-rate number?
@@ -61,29 +61,14 @@
   ; }}}
 
   ; get-Δw {{{
-  (def former-Δw #f)
   (def (get-Δw o t_ ntw)
     ;(displayln (get-Δw (remove-head o) t_ (remove-head ntw)))
-    (if (not (pair? former-Δw))
-      (map (λ (layer-δ lst-o)
-             (map (λ (elem-δ)
-                    (scale (* -1 η elem-δ) lst-o))
-                  layer-δ))
-           (get-δ (remove-head o) t_ (remove-head ntw))
-           (remove-tail o))
-
-      (map (λ (layer-δ lst-o layer-former-Δw)
-             (map (λ (elem-δ node-former-Δw)
-                    (map +
-                         (scale (1 . - . α)
-                                (scale (* -1 η elem-δ) lst-o))
-                         (scale α node-former-Δw)))
-                  layer-δ
-                  layer-former-Δw))
-           (get-δ (remove-head o) t_ (remove-head ntw))
-           (remove-tail o)
-           former-Δw)
-      ))
+    (map (λ (layer-δ lst-o)
+           (map (λ (elem-δ)
+                  (scale (* -1 η elem-δ) lst-o))
+                layer-δ))
+         (get-δ (remove-head o) t_ (remove-head ntw))
+         (remove-tail o)))
   ; }}}
 
   ; t_ should be numbers; o should be result of apply-network
@@ -98,6 +83,7 @@
                                          t__ network))
                                _i
                                _t))])
+      ;(display "_t equal t_? ") (displayln (equal? _t t_))
       ;(display sum-Δw)
       (vector-set! batch-delat-w ind sum-Δw)))
 
@@ -121,86 +107,83 @@
                 t_))])
       (display "Train No. ") (display (+ 1 (- old-max-train-times max-train-times)))
       (display "\tmean error: ") (display mean-error)
-      (display " abs error: ") (displayln abs-error)))
+      (display "\t\tabs error: ") (displayln abs-error)))
   ; }}}
 
-  ; multi-threaded
-  (def core-num (processor-count))
+  (def core-num 1)
   (display "using ") (display core-num) (displayln " cores of cpu...")
   (def batch-delat-w (make-vector core-num))
   (def (train-batch i_ t_)
-    ;(displayln (take t_ 3))
-    ;(def (init-threads num)
-      ;(if (= num 0)
-        ;null
-        ;(cons (thread (λ () (new-network i_ t_ (- num 1)
-                                         ;(round (* (/ (- num 1) core-num)
-                                                   ;batch-size))
-                                         ;(round (* (/ num core-num)
-                                                   ;batch-size)))))
-              ;(init-threads (- num 1)))))
-    ;(def (wait-threads l)
-      ;(if (null? l)
-        ;null
-        ;(begin (thread-wait (car l)) (wait-threads (cdr l)))))
-    ;(wait-threads (init-threads core-num))
-    (for/async ([ind (build-list core-num values)])
-               (new-network i_ t_ ind
-                            (round (* (/ ind core-num)
-                                      batch-size))
-                            (round (* (/ (+ ind 1) core-num)
-                                      batch-size))))
+    (for ([ind (build-list core-num values)])
+      ;(display "FOR: ")
+      ;(displayln ind)
+      (new-network i_ t_ ind
+                   (round (* (/ ind core-num)
+                             batch-size))
+                   (round (* (/ (+ ind 1) core-num)
+                             batch-size))))
     (set! network (foldl add-network network (vector->list batch-delat-w)))
     (analyze-error i_ t_))
 
   (def old-max-train-times max-train-times)
+  ;(when (not (file-exists? "ntws"))
+  ;(with-output-to-file "ntws" (λ () (s-exp->fasl null (current-output-port)))))
   (def (loop)
     (if (= max-train-times 0)
       null
       (let* ([reader-t (make-data-reader (open-input-file t))]
-             [reader-i (make-data-reader (open-input-file input))])
-        (def (iter)
+             [reader-i (make-data-reader (open-input-file input))]
+             ;[ntws (with-input-from-file "ntws" (λ () (fasl->s-exp (current-input-port))))]
+             )
+        ;(when (not (null? ntws)) (set! network (car ntws)))
+
+        (def (iter i)
+          (when (= 0 (remainder (* i batch-size) 2000))
+            (analyze-result (csv->data  "./dataset/test-images.csv")
+                            (csv->label "./dataset/test-labels.csv") network))
           (let ([i_raw (csv-take reader-i batch-size)]
                 [t_raw (csv-take reader-t batch-size)])
             (if (< (len i_raw) batch-size)
               (begin
-                (set! max-train-times (- max-train-times 1)))
-              (let ([i_ (mapmap string->number i_raw)]
+                (set! max-train-times (- max-train-times 1))
+                )
+              (let ([i_ (mapmap (λ (s) (- (string->number s) 0.5)) i_raw)]
                     [t_ (map row->label t_raw)])
                 (train-batch i_ t_)
-                (iter)
+                ;(set! max-train-times (- max-train-times 1))
+                (iter (+ i 1))
                 ))))
-        (iter)
-        (analyze-result (csv->data  "./dataset/test-images.csv")
-                        (csv->label "./dataset/test-labels.csv") network)
+        (iter 0)
+        ;(with-output-to-file "ntws" #:exists 'replace
+                             ;(λ () (s-exp->fasl (cons network ntws)
+                                                ;(current-output-port))))
         (loop))))
   (loop)
   network)
 
 ; (csv->data str) {{{
 (def (csv->data str)
-     (csv-map (lambda (row)
-                (map string->number row))
-              (make-data-reader (open-input-file str))))
+  (csv-map (lambda (row)
+             (map (λ (s) (- (string->number s) 0.5)) row))
+           (make-data-reader (open-input-file str))))
 ; }}}
 ; (csv->label str) {{{
 (def (csv->label str)
-     (def (iter one i res)
-          (if (= i 0)
-              (reverse res)
-              (if (= (- 10 one) i)
-                  (iter one (- i 1) (cons 1 res))
-                  (iter one (- i 1) (cons 0 res)))))
-     (csv-map (lambda (row)
-                (iter (string->number (first row)) 10 null))
-              (open-input-file str)))
+  (def (iter one i res)
+    (if (= i 0)
+      (reverse res)
+      (if (= (- 10 one) i)
+        (iter one (- i 1) (cons 1 res))
+        (iter one (- i 1) (cons 0 res)))))
+  (csv-map (lambda (row)
+             (iter (string->number (first row)) 10 null))
+           (open-input-file str)))
 ; }}}
 (def (analyze-result test-samples test-labels ntw)
-  (newline)
-  (displayln "train finished...")
   (newline) (displayln "test starting...") (newline)
   (let* ([outputs (map (λ (input) (final-output (apply-network input ntw)))
                        test-samples)]
+         ;[n (displayln (car outputs))]
          [result (map (λ (output t)
                         (let* ([max-output (apply max output)]
                                [norm-output (map (λ (x) (if (= x max-output) 1 0))
@@ -211,11 +194,11 @@
                       outputs
                       test-labels)]
          [success-rate (average result)])
+    (displayln (take result 10))
     (display "success rate: ") (display success-rate) (display " (")
     (display (exact->inexact success-rate)) (displayln ")"))
 
-  (displayln "test finished")
-  (void))
+  (displayln "test finished"))
 ; network API {{{
 
 (def max-train-times 1000000000)
