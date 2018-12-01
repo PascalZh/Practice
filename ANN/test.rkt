@@ -1,41 +1,96 @@
 #!/usr/bin/env racket
 #lang racket
-(require "../Lisp/libcommon.rkt")
+
+(require racket/fasl)
 (require csv-reading)
-(require "./bp_ann.rkt")
+(require "bp_ann.rkt")
+(require "../Lisp/libcommon.rkt")
 
-;(def a 1)
-;a
-;(def (r x) x)
-;(r 2)
-;(len (list 1 2 3))
-;(displayln (csv->list "train-labels.csv"))
 
-;(def ntw (make-network '(2 2 1)))
-;ntw
-;(ntw-node ntw 2 1)
-;(ntw-node ntw 3 1)
-;(def output (apply-network '(1 0) ntw))
-;output
-;(def ntw '(bp1  ((0.5 0.5))))
-;ntw
-;(def ntw2 (make-network '(2 2 1)))
-;ntw2
-;(def ntw1 (add-network (cdr ntw) (cdr ntw2)))
-;ntw1
-;(def i '((1 0)))
-;(def o '((1)))
-;(def res (apply-network '(1 2) ntw))
-;res
-;(def trained-ntw (train i o ntw #:learning-rate 0.6))
-;(displayln trained-ntw)
-;(displayln (apply-network (car i) trained-ntw))
+;(define ntws (with-input-from-file
+               ;"ntws0"
+               ;(λ () (fasl->s-exp (current-input-port)))))
 
+;(map (λ (ntw) (map (λ (node) (println (apply + node)))(last ntw)) (displayln "**********")) ntws)
+
+;(println (len ntws))
+;(display (map (λ (l1 l2)
+                ;(map (λ (n1 n2)(map - n1 n2))
+                     ;l1 l2))
+              ;(car ntws)
+              ;(cadr ntws)))
+
+(define (analyze-result test-samples test-labels ntw)
+  (displayln "test starting...") (displayln (len test-samples))(newline)
+  (let* ([outputs (map (λ (input) (final-output (apply-network input ntw)))
+                       test-samples)]
+         [result (map (λ (output t)
+                        (let* ([max-output (apply max output)]
+                               [norm-output (map (λ (x) (if (= x max-output) 1 0))
+                                                 output)])
+                          (if (equal? norm-output t)
+                            1
+                            0)))
+                      outputs
+                      test-labels)]
+         [success-rate (average result)])
+    (displayln (take result 10))
+    (display "success rate: ") (display success-rate) (display " (")
+    (display (exact->inexact success-rate)) (displayln ")"))
+
+  (displayln "test finished")
+  (void))
+(define (final-output o)
+  (first (reverse o)))
+(define (apply-network input network #:act-f [af sigmoid])
+  (def (iter ntw res)
+    (if (null? ntw)
+      (reverse res)
+      (iter (cdr ntw)
+            (cons
+              (map af
+                   (map (λ (node) (dot-prod node (car res)))
+                        (car ntw)))
+              res))))
+  (if (not (pair? (car network)))
+    (iter (cdr network ) (list (map af input)))
+    (iter network (list (map af input)))))
+(def sigmoid (λ (z) (/ 1 (+ 1 (exp (- 0.0 z))))))
+; dot-prod {{{
+(def (dot-prod l1 l2)
+  (when (not (= (len l1) (len l2)))
+    (displayln "dot-prod: l1 and l2 not aligned")
+    (displayln "l1: ")
+    (displayln l1)
+    (displayln "l2: ")
+    (displayln l2))
+  (foldl +
+         0
+         (map * l1 l2)))
+; }}}
 (def make-data-reader
   (make-csv-reader-maker
-   '((separator-chars            #\,)
-     (strip-leading-whitespace?  . #t)
-     (strip-trailing-whitespace? . #t))))
-(def reader (make-data-reader (open-input-file "foo.csv")))
-(csv-take reader 2)
-(csv-take reader 4)
+    '((separator-chars            #\,)
+      (strip-leading-whitespace?  . #t)
+      (strip-trailing-whitespace? . #t))))
+; (csv->data str) {{{
+(def (csv->data str)
+  (csv-map (lambda (row)
+             (map string->number row))
+           (make-data-reader (open-input-file str))))
+; }}}
+; (csv->label str) {{{
+(def (csv->label str)
+  (def (iter one i res)
+    (if (= i 0)
+      (reverse res)
+      (if (= (- 10 one) i)
+        (iter one (- i 1) (cons 1 res))
+        (iter one (- i 1) (cons 0 res)))))
+  (csv-map (lambda (row)
+             (iter (string->number (first row)) 10 null))
+           (open-input-file str)))
+; }}}
+
+
+(analyze-result (csv->data  "./dataset/test-images.csv") (csv->label  "./dataset/test-labels.csv") (make-network '(784 33 10)))

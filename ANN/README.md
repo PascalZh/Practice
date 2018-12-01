@@ -40,10 +40,14 @@ The massive numbers in the file refer to a w of two nodes, I just pick it with `
 
 I compared different inertia term (momentum) α, but it seems make no difference. I think is must be the problem of samples.
 
-#### Final Step: train the network with huge size dataset (1.log, 2.log)
+#### Step 4: train the network with huge size dataset (1.log, 2.log)
 I try to use this simple bp neural network to recognize handwritten numbers. Every pixel is counted as a input neuron of the network. The number of output neuron is ten, since I encoded the tag by 10 bits (e.g. 10000 00000 represents 0; 01000 00000 represents 1; 00100 00000 represents 2).
 
 I choose **SGD** (stochastic gradient decreasing) to update the weight values. So the network will converge very soon but perhaps converge to local optimum solution (this is true for 2.log).
+
+#### Step 5: **BGD** instead of **SGD**
+Use **BGD** instead of **SGD**.
+It converges to a stable network very soon, but the rate of success is very low (0.1135).
 
 **file explanation:**
 + *1.log* is the output of program that runs for a day.

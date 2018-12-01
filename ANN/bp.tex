@@ -1,0 +1,63 @@
+\documentclass[UTF8]{article}
+\usepackage{xeCJK}
+%\setCJKmainfont{KaiTi}
+\usepackage{amsmath}
+\usepackage{listings}
+\include{lstlang0.sty}
+\usepackage{color}
+\usepackage{textcomp}
+
+\begin{document}
+
+\title{基于BP神经网络的手写数字识别}
+\author{张思言}
+\date{2018/12/01}
+\maketitle
+
+  \section{摘要}
+  为了深入了解BP神经网络，了解BP神经网络在图像识别方面的应用，我们编写了BP神经网络进行了测试，采用mnist手写数字数据集作为训练集以及测试集．
+  我们分别研究了步长，批量大小（batch size），网络结构对神经网络效果的影响．
+
+  \section{正文}
+
+  \subsection{问题建模}
+  我们对手写数字识别这个任务进行了数学建模：
+  \begin{enumerate}
+    \item 选择激活函数
+      我们选择了sigmoid函数：
+      \begin{equation}
+        S(x) = \frac{1}{1+e^{-x}}
+      \end{equation}
+    \item 输入层的建模
+      mnist数据集的图片大小为$28\cdot 28$，我们将图片数字化，按从上到下，从左到右的顺序放入一个向量$\textbf{x}$中，这个向量有$28\cdot28$（784）维，对应着输入层的784个神经元．并且由于图片的每个像素为灰度值（0~255），为了方便神经网络的计算和收敛，我们通过除以255来进行简单的归一化处理．
+    \item 输出层的建模
+      输出层有十个神经元，每个神经元代表一个数字，如果某个神经元为1，其余神经元为0，则代表这个神经元所对应的数字．在使用网络测试时，由于输出的值在0~1的范围内，我们选择值最大的那个神经元对应的数字作为结果来判断此次预测是否正确．
+  \end{enumerate}
+
+  \subsection{网络结构的影响}
+  据研究，增加网络层数的方法在这次实验中的效果不如增加中间层神经元的数量，所以我们选用三层网络结构，对中间层的神经元的数量进行修改，并查看其影响．
+
+  \subsection{批量大小以及步长综合的影响}
+  \subsubsection{SGD, BGD的理论分析}
+  SGD(Stochastic Gradient Decrease)指的是随机梯度下降法．随机梯度下降法每训练一个样本就用来更新一次网络，具有收敛快的优点，但是由于单个样本的噪声比较大，结果具有随机性，不一定会趋向全局最优解，而且不容易实现并行运算．
+
+  BGD(Batch Gradient Decrease)指的是批量梯度下降法，指的是每次更新网络都用n个样本，其中n指的是批量大小．这种方法改进了随机梯度下降法的缺点，能够较好地趋向全局最优解，而且便于并行运算．
+  \subsubsection{SGD与BGD对照实验}
+  下面是用随机梯度下降法的结果：
+  下面是用批量梯度下降法的结果：
+  可以看出使用随机梯度下降法具有较大的随机性，网络收敛以后，随机梯度下降法测试的正确率任然在不停地波动．而使用批量梯度法的网络一旦收敛，继续训练的结果也不会发生太大变化．
+  \subsubsection{不同批量及步长的对照实验}
+  下图是使用了不同的批量，不同步长的误差曲线以及成功率．
+  在实验过程中，我们发现不同的批量只要超过了50以后就没有多大的影响，它们的测试成功率都稳定在0.1135，而步长的选择也没有多大的影响，只有当步长过大时有可能导致梯度的消失，这时只要把步长逐步调小即可．
+  \section{小结}
+  单纯用BP神经网络进行图像的识别的效果不太好，而且BP神经网络步长的调整也不太方便，应该结合卷积神经网络进行相关研究，以及研究自动调整步长的算法．
+
+  \section{代码实现}
+  
+  \lstset{language=Scheme}
+  \begin{lstlisting}
+    (define ())
+    (if )
+  \end{lstlisting}
+
+\end{document}
