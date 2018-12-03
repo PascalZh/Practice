@@ -7,15 +7,19 @@ tmp/
 *.exe
 *.out
 *.log
+*.aux
+*.pdf
 
 /C51/whut_homeworks/LED/*
 !/C51/whut_homeworks/LED/*.c
 !/C51/whut_homeworks/LED/*.png
 
 foo/
+bar/
 foo.*
 bar.*
 foobar.*
 
-/ANN/dataset
-/ANN/result
+/ANN/bp_nn/dataset
+/ANN/bp_nn/result
+/ANN/**/*.sty
