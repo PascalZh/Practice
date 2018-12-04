@@ -26,15 +26,26 @@
 (struct engine (name in out err pid ctrl) #:transparent)
 
 (def (init-engine name)
+  ;; 手动建立管道, p_in/p_out 代表子进程的stdin/stdout
+  (define-values (p_in out) (make-pipe))
+  (define-values (in p_out) (make-pipe))
+  (define-values (err p_err) (make-pipe))
+  (def leelaz-path
+    (string-append
+      "~/program_files/leela-zero/build/leelaz "
+      "--cpu-only -w ~/program_files/leela-zero/build/best-network "
+      "--gtp -t 4 --noponder -p 1"))
+  (def AGo-path
+    (string-append "~/program_files/AGo/AGo"))
   (cond [(eq? name 'leelaz)
-         ;; 手动建立管道, p_in/p_out 代表子进程的stdin/stdout
-         (define-values (p_in out) (make-pipe))
-         (define-values (in p_out) (make-pipe))
-         (define-values (err p_err) (make-pipe))
          (displayln "init engine leela zero...")
-         (def l (process/ports p_out p_in p_err
-                               "~/program_files/leela-zero/build/leelaz --cpu-only -w ~/program_files/leela-zero/build/best-network --gtp -t 4 --noponder -p 1"))
-         (engine 'leelaz in out err (list-ref l 2) (list-ref l 4))]))
+         (def l (process/ports p_out p_in p_err leelaz-path))
+         (engine 'leelaz in out err (list-ref l 2) (list-ref l 4))]
+        [(eq? name 'AGo)
+         (displayln "init engine AGo...")
+         (def l (process/ports p_out p_in p_err AGo-path))
+         (engine 'AGo in out err (list-ref l 2) (list-ref l 4))]
+        ))
 
 (def (next-move coordinate eng)
   (def ret #f)
@@ -45,7 +56,7 @@
        [coord  (substring str 1)]
        [cmd (string-append "play " color " " coord)]
        [color-rev (if (string=? color "w") "b" "w")])
-      
+
       (write-gtp cmd eng)
       (def r1 (read-gtp eng))
       (if (or (string=? "?" (string (string-ref r1 0)))
@@ -63,7 +74,17 @@
   (LOGI "test write-gtp" "play w A1")
   (write-gtp "play w A1" eng)
   (LOGI "test read-gtp" (read-gtp eng))
-  (LOGI "test next-move" (next-move eng 'bA2 )))
+  (LOGI "test next-move" (next-move eng 'bA2 ))
+  (write-gtp "quit" eng)
+  (read-gtp eng)
+
+  (set! eng (init-engine 'AGo))
+  (LOGI "AGo" (write-gtp "play w A1" eng))
+  (LOGI "AGo" (read-gtp eng))
+  (LOGI "AGo" (write-gtp "showboard" eng))
+  (LOGI "AGo" (read-gtp eng))
+  (LOGI "AGo stderr" (read (engine-err eng)))
+  )
 
 (def (read-gtp eng)
   (when (eq? 'running ((engine-ctrl eng) 'status))
@@ -86,11 +107,11 @@
     (let ([l (read-line err)])
       (list (- 19 n)
             (cons 'B (map (λ (pair) (((car pair) . - . 1) . / . 2))
-                   (regexp-match-positions* #rx"X" l)))
+                          (regexp-match-positions* #rx"X" l)))
             (cons 'W (map (λ (pair) (((car pair) . - . 1) . / . 2))
-                   (regexp-match-positions* #rx"O" l)))
+                          (regexp-match-positions* #rx"O" l)))
             (cons 'current (map (λ (pair) ((car pair) . / . 2))
-                   (regexp-match-positions* #rx"\\(" l))))))
+                                (regexp-match-positions* #rx"\\(" l))))))
   (def (loop)
     (let ([l (read-line err)])
       (if (regexp-match #rx"a b c d e" l)

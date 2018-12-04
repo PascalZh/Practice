@@ -21,10 +21,15 @@ for(let i=0; i<19; i++) {
 
 function onChessStart() {
   clearBoard();
-  let leelaz = $('#leelaz').val();
-  if (leelaz == 'on') {
+  let leelaz = $('#leelaz')[0].checked;
+  let AGo = $('#AGo')[0].checked;
+  if (leelaz) {
     let player_id = getPlayerId();
-    chess_http.open('GET', `/Go/start/${player_id}/leelaz`);
+    chess_http.open('GET', `/Go/start/${player_id}/leelaz`, true);
+    chess_http.send();
+  } else if (AGo) {
+    let player_id = getPlayerId();
+    chess_http.open('GET', `/Go/start/${player_id}/AGo`, true);
     chess_http.send();
   }
 }
@@ -45,12 +50,12 @@ function getPlayerId() {
 }
 
 function onChessStop() {
-  chess_http.open('GET', '/Go/stop');
+  chess_http.open('GET', '/Go/stop', true);
   chess_http.send();
 }
 
 function onChessRestart() {
-  chess_http.open('GET', '/Go/clear_board');
+  chess_http.open('GET', '/Go/clear_board', true);
   chess_http.send();
 }
 
@@ -148,7 +153,7 @@ FiveChesscanvas.onclick = (e)=>{
 
     url_ += map_a2n[i] + (19 - j).toString();
     console.log("onclick: get: url:" + url_);
-    chess_http.open("GET", url_);
+    chess_http.open("GET", url_, true);
     chess_http.send();
     is_me = false;
   }
@@ -158,7 +163,7 @@ chess_http.onreadystatechange = ()=>{
   if (chess_http.readyState==4 && chess_http.status==200)
   {
     let ret = chess_http.responseText;
-    console.log("receive from /Go:" + ret);
+    console.log("receive from /Go:" + ret.split("'")[0]);
 
     if (/[ABCDEFGHJKLMNOPQRST]([1-9]|1\d)/.test(ret)) {
 
@@ -203,6 +208,7 @@ chess_http.onreadystatechange = ()=>{
       alert("引擎已经启动！请重新开始或者继续对决");
     } else if (/stop ok/.test(ret)) {
       is_me = false;
+      alert("引擎已关闭")
     } else if (/clear_board ok/.test(ret)) {
       is_me = true;
       clearBoard();

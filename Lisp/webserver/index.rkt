@@ -299,19 +299,31 @@
           (= (len path) 1))
      (if (not eng)
        (response/xexpr "no engine")
-       (begin
-         (set! current-player #f)
-         ((engine-ctrl eng) 'kill)
-         (set! eng #f)
-         (response/xexpr "stop ok")))]
+       (if (begin (write-gtp "quit" eng)
+                    (string=? "= " (read-gtp eng)))
+         (begin
+           (set! current-player #f) (set! eng #f)
+           (response/xexpr "stop ok"))
+         (response/xexpr "stop error")))]
     ; }}}
 
     ; 负责机器与机器交战的逻辑
     ; 由于机器与机器交战不需要复杂的逻辑（只需要你一步我一步地下棋）
     ; 所以可以直接将url直接解析成gtp协议的命令（空格替换成斜杠）
     [(string=? (car path) "gtp")
-     (response/xexpr "gtp not supported")]
-    ))
+     (let* ([cmd (string-append
+                  (cadr path)
+                  (apply string-append
+                         (map (λ (s) (string-append " " s))
+                              (cddr path))))]
+           [resp (begin 
+                   (display "Writing gtp to ")  (displayln (engine-name eng))
+                   (println cmd)
+                   (write-gtp cmd eng)
+                   (read-gtp eng))])
+       (display "Read from ")  (displayln (engine-name eng))
+       (println cmd)
+       (if resp (response/xexpr resp) (response/xexpr "gtp error")))]))
 ; }}}
 
 
@@ -339,7 +351,7 @@
   (unless (directory-exists? "tmp")
     (make-directory "tmp"))
 
-  (thread (λ () (system "features/filter_request_log.py")))
+  (process "features/filter_request_log.py")
 
   (serve/servlet start
                  #:port 8888

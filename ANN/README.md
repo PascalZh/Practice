@@ -3,13 +3,16 @@ This created for practicing something about ANN.
 
 ## Table of Contents
 
-[**BP Neural Network with Racket**](#a-simple-bp-network-algorithm-by-racket)
+[**BP Neural Network with Racket**`bp_nn/`](#a-simple-bp-network-algorithm-by-racket)
 * [Training Analysis](#bp-ntw-racket-analysis)
 * [Summary](#bp-ntw-racket-summary)
 * [TODO](#bp-ntw-racket-todo)
 
 <a name="bp-ntw-racket"></a>
 ## A simple bp network algorithm by Racket
+
+> This project has very bad codes, and will not be maintained or updated.
+> And this part of README is also not maintained, read `bp_nn/number_recognition_by_bp.tex` for more details.
 
 This network is used to recognize handwritten numbers.
 
@@ -55,6 +58,7 @@ It converges to a stable network very soon, but the rate of success is very low 
 + *success_rate.log* is extracted from *2.log* for convenience.
 + *success_rate.png* is the visualized version.
 + *mean_error.png* is the diagram of *2.log*.
++ ...
 
 <a name="bp-ntw-racket-summary"></a>
 ### Summary

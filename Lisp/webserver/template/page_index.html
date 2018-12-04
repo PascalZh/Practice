@@ -9,7 +9,14 @@
 <div class="chess-container">
   <canvas id="ChessCanvas" width="630" height="630">您的浏览器不支持显示棋盘</canvas>
 
-  <label><input type="radio" name="leelaz" id="leelaz">leela zero</label>
+  <div class="custom-control custom-radio">
+    <input type="radio" id="leelaz" name="customRadio" class="custom-control-input">
+    <label class="custom-control-label" for="leelaz">leelaz</label>
+  </div>
+  <div class="custom-control custom-radio">
+    <input type="radio" id="AGo" name="customRadio" class="custom-control-input">
+    <label class="custom-control-label" for="AGo">AGo</label>
+  </div>
   <button class="btn btn-dark" onclick="onChessStart()">Start</button>
   <button class="btn btn-dark" onclick="onChessRestart()">Restart</button>
   <button class="btn btn-dark" onclick="onChessStop()">Stop</button>
