@@ -6,10 +6,10 @@ const flag_none = 0; const flag_white = 1; const flag_black = 2;
 let has_stone = [];
 let is_me = false;
 let is_me_white = false;
-let is_over = false;
+//let is_over = false;
 let chess_http = new XMLHttpRequest();
 // 用来把字母横坐标映射成数
-let map_a2n = 'ABCDEFGHJKLMNOPQRST'.split('')
+let map_a2n = 'ABCDEFGHJKLMNOPQRST'.split('');
 
 drawChessBoard();
 for(let i=0; i<19; i++) {
@@ -23,6 +23,8 @@ function onChessStart() {
   clearBoard();
   let leelaz = $('#leelaz')[0].checked;
   let AGo = $('#AGo')[0].checked;
+  let PvC = $('#PvC')[0].checked;
+  let PvP = $('#CvC')[0].checked;
   if (leelaz) {
     let player_id = getPlayerId();
     chess_http.open('GET', `/Go/start/${player_id}/leelaz`, true);
@@ -114,7 +116,8 @@ function oneStep() {
       if(has_stone[i][j] == flag_white) {
         context.beginPath();
         context.arc(30*i+15+30, 30*j+15+30, 13, 0, Math.PI*2);
-        let gradient = context.createRadialGradient(30*i+15+30, 30*j+15+30, 13, 30*i+15+30, 30*j+15+30, 0);
+        let gradient = context.createRadialGradient(
+          30*i+15+30, 30*j+15+30, 13, 30*i+15+30, 30*j+15+30, 0);
         gradient.addColorStop(0, "#b1b1b1");
         gradient.addColorStop(1, "#f9f9f9");
         context.fillStyle = gradient;
@@ -124,7 +127,8 @@ function oneStep() {
       else if (has_stone[i][j] == flag_black) {
         context.beginPath();
         context.arc(30*i+15+30, 30*j+15+30, 13, 0, Math.PI*2);
-        let gradient = context.createRadialGradient(30*i+15+30, 30*j+15+30, 13, 30*i+15+30, 30*j+15+30, 0);
+        let gradient = context.createRadialGradient(
+          30*i+15+30, 30*j+15+30, 13, 30*i+15+30, 30*j+15+30, 0);
         gradient.addColorStop(0, "#0a0a0a");
         gradient.addColorStop(1, "#636766");
         context.fillStyle = gradient;
@@ -139,7 +143,7 @@ FiveChesscanvas.onclick = (e)=>{
   let y = e.offsetY;
   let i = Math.floor(x/30)-1;
   let j = Math.floor(y/30)-1;
-  if(i>=0 && j>=0 &&
+  if (i>=0 && j>=0 &&
     has_stone[i][j] == flag_none &&
     is_me) {
 
@@ -148,7 +152,7 @@ FiveChesscanvas.onclick = (e)=>{
 
     let url_ = "/Go/play/b"
     if (isWhite()) {
-      url_ = "/Go/play/w"
+      url_ = "/Go/play/w";
     }
 
     url_ += map_a2n[i] + (19 - j).toString();
@@ -156,7 +160,7 @@ FiveChesscanvas.onclick = (e)=>{
     chess_http.open("GET", url_, true);
     chess_http.send();
     is_me = false;
-  }
+  } else { console.log('invalid click on the chessboard'); }
 }
 
 chess_http.onreadystatechange = ()=>{
@@ -204,7 +208,7 @@ chess_http.onreadystatechange = ()=>{
 
     } else if (/start ok/.test(ret)) {
       is_me = true;
-    } else if (/unfinished play:.*/.test(ret)) {
+    } else if (/unfinished play!.*/.test(ret)) {
       alert("引擎已经启动！请重新开始或者继续对决");
     } else if (/stop ok/.test(ret)) {
       is_me = false;
@@ -214,6 +218,10 @@ chess_http.onreadystatechange = ()=>{
       clearBoard();
     } else if (/no engine/.test(ret)) {
       alert("没有启动引擎！");
+    } else if (/gtp:/.test(ret)) {
+      
+    } else if (/gtp error/.test(ret)) {
+      alert("gtp error!");
     }
   }
 };

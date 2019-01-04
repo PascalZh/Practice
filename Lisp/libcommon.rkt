@@ -2,7 +2,7 @@
 (require racket/date)
 (provide def len average pow even? square)
 (provide csv-take sh)
-(provide mapmap build-mlist mlist-ref)
+(provide map2d build-mlist mlist-ref)
 (provide LOGI LOGW LOGE)
 
 (define-syntax def
@@ -25,7 +25,7 @@
   (with-output-to-string (λ () (system cmd))))
 
 (def len length)
-(def (mapmap proc arg)
+(def (map2d proc arg)
   (map (λ (lst) (map proc lst))
        arg))
 (def (build-mlist n proc)
@@ -39,20 +39,17 @@
     (mcar mlst)
     (mlist-ref (mcdr mlst) (n . - . 1))))
 
+(def (LOG_ level tag message)
+  (begin
+    (display-time-ln)
+    (display level) (display tag) (display ":")
+    (println message)))
 (def (LOGI tag message)
-  (display-time)(displayln "")
-  (display "(I)")(display tag)(display ":")
-  (println message))
-
+  (LOG_ "(I)" tag message))
 (def (LOGW tag message)
-  (display-time)(displayln "")
-  (display "(W)")(display tag)(display ":")
-  (println message))
-
+  (LOG_ "(W)" tag message))
 (def (LOGE tag message)
-  (display-time)(displayln "")
-  (display "(E)")(display tag)(display ":")
-  (println message))
+  (LOG_ "(E)" tag message))
 
 (def (display-time)
   (def d (current-date))
@@ -62,18 +59,18 @@
              (number->string (date-hour d))
              ":"
              (number->string (date-minute d))
-             ":"
-             (number->string (date-second d)))))
+             ;":"
+             ;(number->string (date-second d))
+             )))
+(def (display-time-ln) (display-time) (displayln ""))
 
 ; math {{{
 
 (def (average lst) (/ (apply + lst) (len lst)))
 
-(def (even? x)
-  (= (remainder x 2) 0))
-
 (def (square x) (* x x))
 
+; fast power
 (def (pow b p)
   (def (iter res a n)
     (if (= n 0)

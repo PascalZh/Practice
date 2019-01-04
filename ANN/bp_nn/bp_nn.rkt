@@ -147,7 +147,7 @@
               (begin
                 (set! max-train-times (- max-train-times 1))
                 )
-              (let ([i_ (mapmap (λ (s) (- (string->number s) 0.5)) i_raw)]
+              (let ([i_ (map2d (λ (s) (- (string->number s) 0.5)) i_raw)]
                     [t_ (map row->label t_raw)])
                 (train-batch i_ t_)
                 ;(set! max-train-times (- max-train-times 1))

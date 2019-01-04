@@ -38,25 +38,35 @@
 
     [("test" (string-arg) ...) render/response-test]
 
-    [("Go" (string-arg) ...) render/response-Go]
-    ))
+    [("Go" (string-arg) ...) render/response-Go]))
 
-(def (start request)
-  (initial-db)
-  (dispatch request))
+; don't use define-syntax-rule, because include-template seams
+; not to use the context where it expands.
+; use datum->syntax to explicitly pass context to the syntax
+(define-syntax (inc-index stx)
+  (datum->syntax stx '(include-template "./template/page_index.html")))
+(define-syntax (inc-esp32 stx)
+  (datum->syntax stx '(include-template "./template/page_esp32.html")))
+(define-syntax (inc-login stx)
+  (datum->syntax stx '(include-template "./template/page_login.html")))
+(define-syntax (inc-search stx)
+  (datum->syntax stx '(include-template "./template/page_search.html")))
+(define-syntax (inc-test stx)
+  (datum->syntax stx '(include-template "./template/page_test.html")))
 
+(define-syntax (inc-navbar stx)
+  (datum->syntax stx '(include-template "./template/navbar_1.html")))
+(define-syntax (inc-carousel stx)
+  (datum->syntax stx '(include-template "./template/carousel_1.html")))
+(define-syntax (inc-template stx)
+  (datum->syntax stx '(include-template "./template/template.html")))
 
 (def ip "还没有获取IP")
 (def (render/response-esp32 request)
-  (render/response-with-template 
-    (include-template "./template/page_esp32.html")
-    request))
+  (render/response-with-template (inc-esp32) request))
 
 (def (render/response-index request)
-  (render/response-with-template
-    (include-template "./template/page_index.html")
-    request
-    #:carousel? #t))
+  (render/response-with-template (inc-index) request #:carousel? #t))
 
 ; get-ip {{{
 
@@ -102,28 +112,20 @@
       (if (not admin)
         (begin
           (set! content "账号不存在或者密码错误！")
-          (render/response-with-template 
-            (include-template "./template/page_login.html")
-            request))
-        (begin
-          ; 登录成功，跳转回主页
-          ; 这里花了一晚上的时间调试都没有结果，提交表单时怎么也无法跳转到
-          ; 这段代码，结果第二天继续DEBUG时发现，原来程序并没有出错！！！
-          ; 是Firefox擅自把Cached的数据作为跳转页面，直接跳回主页了！！！
-          ; 清除Firefox缓存就好了%>_<%
-          ;(display "COOKIE HEADER: ")
-          ;(response/xexpr "HELLO")
-          ;(println (cookie->header
-                     ;(make-login-cookie username userpwd)))
-          (redirect-to "/" permanently
-                       #:headers
-                       (list
-                         (cookie->header
-                           (make-login-cookie username userpwd)))))))
-    (begin
-      (render/response-with-template 
-        (include-template "./template/page_login.html")
-        request))))
+          (render/response-with-template (inc-login) request))
+        ; 登录成功，跳转回主页
+        ; 这里花了一晚上的时间调试都没有结果，提交表单时怎么也无法跳转到
+        ; 这段代码，结果第二天继续DEBUG时发现，原来程序并没有出错！！！
+        ; 是Firefox擅自把Cached的数据作为跳转页面，直接跳回主页了！！！
+        ; 清除Firefox缓存就好了%>_<%
+        ;(display "COOKIE HEADER: ")
+        ;(response/xexpr "HELLO")
+        ;(println (cookie->header
+        ;(make-login-cookie username userpwd)))
+        (redirect-to "/" permanently #:headers
+                     (list (cookie->header
+                             (make-login-cookie username userpwd))))))
+    (render/response-with-template (inc-login) request)))
 ; }}}
 
 ; template {{{
@@ -142,9 +144,9 @@
                               client-cookies)])
     ; 如果是管理员
     (if (and login-cookie
-               (= 1 (query-account
-                      (client-cookie-name login-cookie)
-                      (client-cookie-value login-cookie))))
+             (= 1 (query-account
+                    (client-cookie-name login-cookie)
+                    (client-cookie-value login-cookie))))
       (set! login-content (render-admin-login-content))
       ; 不是管理员的话永远都看不到
       (set! carousel? #f)))
@@ -155,14 +157,10 @@
   (when (exists-binding? 'search (request-bindings request))
     (set! html-content (render-search-page request)))
 
-  (let ([navbar (include-template "./template/navbar_1.html")]
-        [carousel (if carousel?
-                    (include-template "./template/carousel_1.html")
-                    "")])
+  (let ([navbar (inc-navbar)]
+        [carousel (if carousel? (inc-carousel) "")])
     (page (response/xexpr #:cookies empty
-            `(html ,(make-cdata
-                      #f #f
-                      (include-template "./template/template.html")))))))
+                          `(html ,(make-cdata #f #f (inc-template)))))))
 ; }}}
 
 ; test {{{
@@ -171,7 +169,7 @@
   (cond 
     [(= (length path) 0)
      (response/xexpr
-       (let ([content (include-template "./template/page_test.html")])
+       (let ([content (inc-test)])
          (render/response-with-template content request)))]
 
     [(and (string=? (car path) "add")
@@ -272,7 +270,7 @@
            (set! current-player player_name)
            (response/xexpr "start ok"))
          (response/xexpr
-           (string-append "unfinished play:" current-player))))]
+           (string-append "unfinished play! player_name:" current-player))))]
 
     [(and (string=? (car path) "play")
           (= (len path) 2))
@@ -300,30 +298,31 @@
      (if (not eng)
        (response/xexpr "no engine")
        (if (begin (write-gtp "quit" eng)
-                    (string=? "= " (read-gtp eng)))
+                  (string=? "= " (read-gtp eng)))
          (begin
            (set! current-player #f) (set! eng #f)
            (response/xexpr "stop ok"))
          (response/xexpr "stop error")))]
     ; }}}
-
-    ; 负责机器与机器交战的逻辑
+    ; 负责机器与机器交战的逻辑 {{{
     ; 由于机器与机器交战不需要复杂的逻辑（只需要你一步我一步地下棋）
     ; 所以可以直接将url直接解析成gtp协议的命令（空格替换成斜杠）
     [(string=? (car path) "gtp")
      (let* ([cmd (string-append
-                  (cadr path)
-                  (apply string-append
-                         (map (λ (s) (string-append " " s))
-                              (cddr path))))]
-           [resp (begin 
-                   (display "Writing gtp to ")  (displayln (engine-name eng))
-                   (println cmd)
-                   (write-gtp cmd eng)
-                   (read-gtp eng))])
+                   (cadr path)
+                   (apply string-append
+                          (map (λ (s) (string-append " " s))
+                               (cddr path))))]
+            [resp (begin 
+                    (display "Writing gtp to ")  (displayln (engine-name eng))
+                    (println cmd)
+                    (write-gtp cmd eng)
+                    (read-gtp eng))])
        (display "Read from ")  (displayln (engine-name eng))
        (println cmd)
-       (if resp (response/xexpr resp) (response/xexpr "gtp error")))]))
+       (if resp (string-append "gtp:" (response/xexpr resp))
+         (response/xexpr "gtp error")))]))
+    ; }}}
 ; }}}
 
 
@@ -331,7 +330,6 @@
   (make-cookie
     name pwd
     #:expires (seconds->date (+ (current-seconds) (* 60 60 24 15)))))
-; }}} end implementation
 
 (def (urlopen url)
   (define-values
@@ -342,14 +340,21 @@
     (read port)
     (close-input-port port)))
 
+(def (start request)
+  (dispatch request))
+
 (module* main #f
+
+  (initial-db)
+
+  (unless (directory-exists? "tmp")
+    (make-directory "tmp"))
+  (unless (directory-exists? "log")
+    (make-directory "log"))
 
   ;(current-error-port (open-output-file "log/error.log" #:exists 'append))
   ;(current-output-port (open-output-file "log/output.log" #:exists 'append))
   (def request-output (open-output-file "log/request.log" #:exists 'append))
-
-  (unless (directory-exists? "tmp")
-    (make-directory "tmp"))
 
   (process "features/filter_request_log.py")
 
