@@ -6,63 +6,85 @@
   <h3>探索，创新，思考</h3>
 </div>
 
-<div class="chess-container">
-  <canvas id="ChessCanvas" width="630" height="630">您的浏览器不支持显示棋盘</canvas>
+<div class="row">
+  <div class="col">
+    <canvas id="ChessCanvas" class="chess-canvas" width="630" height="630">您的浏览器不支持显示棋盘</canvas>
+  </div>
+  <div class="col">
+    <div class="btn-group btn-group-toggle" data-toggle="buttons">
+      <label class="btn btn-outline-success active">
+        <input type="radio" name="pk" id="PvC" value="PvC" autocomplete="off" checked>Person vs. Computer
+      </label>
+      <label class="btn btn-outline-success">
+        <input type="radio" name="pk" id="CvC" value="CvC" autocomplete="off">Computer vs. Computer
+      </label>
+    </div>
+    <div class="row no-gutters" id="PvC_row">
+      <div class="custom-control custom-radio">
+        <input type="radio" id="leelaz_1" name="engine_1" class="custom-control-input">
+        <label class="custom-control-label" for="leelaz_1">leelaz</label>
+      </div>
+      <div class="custom-control custom-radio">
+        <input type="radio" id="AGo_1" name="engine_1" class="custom-control-input">
+        <label class="custom-control-label" for="AGo_1">AGo</label>
+      </div>
+    </div>
+    <div class="row no-gutters" id="CvC_row">
+      <div class="col">
+        <!--黑子引擎选择-->
+        <div class="card">
+          <div class="card-body">
+            请选择黑子引擎
+            <div class="custom-control custom-radio">
+              <input type="radio" id="leelaz_b" name="engine_b" class="custom-control-input">
+              <label class="custom-control-label" for="leelaz_b">leelaz</label>
+            </div>
+            <div class="custom-control custom-radio">
+              <input type="radio" id="AGo_b" name="engine_b" class="custom-control-input">
+              <label class="custom-control-label" for="AGo_b">AGo</label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <!--白子引擎选择-->
+        <div class="card">
+          <div class="card-body">
+            请选择白子引擎
+            <div class="custom-control custom-radio">
+              <input type="radio" id="leelaz_w" name="engine_w" class="custom-control-input">
+              <label class="custom-control-label" for="leelaz_w">leelaz</label>
+            </div>
+            <div class="custom-control custom-radio">
+              <input type="radio" id="AGo_w" name="engine_w" class="custom-control-input">
+              <label class="custom-control-label" for="AGo_w">AGo</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-dark" onclick="onChessStart()">Start</button>
+    <button class="btn btn-dark" onclick="onChessRestart()">Restart</button>
+    <button class="btn btn-dark" onclick="onChessStop()">Stop</button>
+
+  </div>
 </div>
 
-<!-- set to the same name to create a group of radio buttons -->
 
-<div class="btn-group btn-group-toggle" data-toggle="buttons">
-  <label class="btn btn-outline-success active">
-    <input type="radio" name="pk" id="PvC" value="PvC" autocomplete="off" checked>Person vs. Computer
-  </label>
-  <label class="btn btn-outline-success">
-    <input type="radio" name="pk" id="CvC" value="CvC" autocomplete="off">Computer vs. Computer
-  </label>
-</div>
+
 <script charset="utf-8">
+  $('#CvC_row')[0].style.display="none";
+  $('#PvC_row')[0].style.display="flex";
   $('input[type=radio][name=pk]').change(()=>{
   if ($('#PvC')[0].checked) {
-    alert("PvC");
+    $('#CvC_row')[0].style.display="none";
+    $('#PvC_row')[0].style.display="flex";
   } else if ($('#CvC')[0].checked) {
-    alert("CvC");
+    $('#CvC_row')[0].style.display="flex";
+    $('#PvC_row')[0].style.display="none";
   }});
 </script>
-
-<div class="row no-gutters">
-  <div class="col-md-3 col-sm-6 col-6">
-    <!--黑子引擎选择-->
-    <div class="card">
-      <div class="card-body">
-        请选择黑子引擎
-        <div class="custom-control custom-radio">
-          <input type="radio" id="leelaz_b" name="engine_b" class="custom-control-input">
-          <label class="custom-control-label" for="leelaz_b">leelaz</label>
-        </div>
-        <div class="custom-control custom-radio">
-          <input type="radio" id="AGo_b" name="engine_b" class="custom-control-input">
-          <label class="custom-control-label" for="AGo_b">AGo</label>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-3 col-sm-6 col-6">
-    <!--白子引擎选择-->
-    <div class="card">
-      <div class="card-body">
-        请选择白子引擎
-        <div class="custom-control custom-radio">
-          <input type="radio" id="leelaz_w" name="engine_w" class="custom-control-input">
-          <label class="custom-control-label" for="leelaz_w">leelaz</label>
-        </div>
-        <div class="custom-control custom-radio">
-          <input type="radio" id="AGo_w" name="engine_w" class="custom-control-input">
-          <label class="custom-control-label" for="AGo_w">AGo</label>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
 
 <!--<div class="btn-group btn-group-toggle" data-toggle="buttons">-->
 <!--<label class="btn btn-outline-success active">-->
@@ -72,10 +94,5 @@
 <!--<input type="radio" name="engine" id="AGo" autocomplete="off"> AGo-->
 <!--</label>-->
 <!--</div>-->
-
-<button class="btn btn-dark" onclick="onChessStart()">Start</button>
-<button class="btn btn-dark" onclick="onChessRestart()">Restart</button>
-<button class="btn btn-dark" onclick="onChessStop()">Stop</button>
-
 
 <script src="/js/Go.js" charset="utf-8"></script>

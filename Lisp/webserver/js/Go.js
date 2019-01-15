@@ -1,11 +1,22 @@
-let FiveChesscanvas = document.getElementById('ChessCanvas');
-let context = FiveChesscanvas.getContext('2d');
+let chess_canvas = document.getElementById('ChessCanvas');
+
+let chess_div = chess_canvas.parentElement;
+// the following code don't work
+// the onresize event does work on div
+//chess_div.onresize = drawChessBoard;
+window.onresize = drawChessBoard;
+let context = chess_canvas.getContext('2d');
+
 // has_stone 标记棋盘上是否有棋子
 // 没有:0白子:1黑子:2
 const flag_none = 0; const flag_white = 1; const flag_black = 2;
 let has_stone = [];
+// is_me 用来控制点击棋盘是否有反应
 let is_me = false;
 let is_me_white = false;
+let engine_b = '';
+let engine_w = '';
+let is_black = true;
 //let is_over = false;
 let chess_http = new XMLHttpRequest();
 // 用来把字母横坐标映射成数
@@ -19,22 +30,48 @@ for(let i=0; i<19; i++) {
   }
 }
 
+// start {{{
 function onChessStart() {
   clearBoard();
-  let leelaz = $('#leelaz')[0].checked;
-  let AGo = $('#AGo')[0].checked;
+  
   let PvC = $('#PvC')[0].checked;
-  let PvP = $('#CvC')[0].checked;
-  if (leelaz) {
-    let player_id = getPlayerId();
-    chess_http.open('GET', `/Go/start/${player_id}/leelaz`, true);
+  let leelaz_1 = $('#leelaz_1')[0].checked;
+  let AGo_1 = $('#AGo_1')[0].checked;
+  
+  let CvC = $('#CvC')[0].checked;
+  // black player
+  let leelaz_b = $('#leelaz_b')[0].checked;
+  let AGo_b = $('#AGo_b')[0].checked;
+  // white player
+  let leelaz_w = $('#leelaz_w')[0].checked;
+  let AGo_w = $('#AGo_w')[0].checked;
+  
+  let player_id = getPlayerId();
+  if (PvC) {
+    if (leelaz_1) {
+      chess_http.open('GET', `/Go/start/${player_id}/leelaz`, true);
+      chess_http.send();
+    } else if (AGo_1) {
+      chess_http.open('GET', `/Go/start/${player_id}/AGo`, true);
+      chess_http.send();
+    }
+  } else if (CvC) {
+    if (leelaz_b) {
+      engine_b = 'leelaz';
+    } else if (AGo_b) {
+      engine_b = 'AGo';
+    }
+    if (leelaz_w) {
+      engine_w = 'leelaz';
+    } else if (AGo_w) {
+      engine_w = 'AGo';
+    }
+    chess_http.open('GET', `/Go/start/${player_id}/${engine_b}`);
     chess_http.send();
-  } else if (AGo) {
-    let player_id = getPlayerId();
-    chess_http.open('GET', `/Go/start/${player_id}/AGo`, true);
-    chess_http.send();
+    is_black = false;
   }
 }
+// }}}
 
 function clearBoard() {
   for(let i=0; i<19; i++) {
@@ -65,7 +102,20 @@ function isWhite() {
   return is_me_white? is_me: !is_me;
 }
 
+// drawChessBoard() {{{
 function drawChessBoard() {
+  // 手机等过小的设备无法下棋
+  if (chess_div.offsetWidth < 630 || chess_div.offsetHeight < 630) {
+    //chess_canvas.style.display = 'none';
+    chess_canvas.style.visibility = 'hidden';
+    return;
+  }
+  //chess_canvas.style.display = 'inline';
+  chess_canvas.style.visibility = 'visible';
+
+  // redraw the canvas
+  chess_canvas.height = chess_canvas.height;
+
   context.beginPath();
   for(let i=0; i<19; i++) {
     context.moveTo(15+30, 15+30*i+30);
@@ -89,6 +139,7 @@ function drawChessBoard() {
   // coordinates
   drawCoordinates(context);
 }
+// }}}
 
 function drawCoordinates(context) {
   context.strokeStyle = "#000";
@@ -108,7 +159,7 @@ function drawSign(i, j, context_) {
   context_.lineTo(15+30*i+30, 15+30*j+15+30)
 }
 
-function oneStep() {
+function drawOneStep() {
   context.clearRect(0,0,630,630);
   drawChessBoard();
   for (let i = 0; i < 19; i++)
@@ -138,7 +189,7 @@ function oneStep() {
     }
 }
 
-FiveChesscanvas.onclick = (e)=>{
+chess_canvas.onclick = (e)=>{
   let x = e.offsetX;
   let y = e.offsetY;
   let i = Math.floor(x/30)-1;
@@ -148,7 +199,7 @@ FiveChesscanvas.onclick = (e)=>{
     is_me) {
 
     has_stone[i][j] = isWhite()? flag_white: flag_black;
-    oneStep();
+    drawOneStep();
 
     let url_ = "/Go/play/b"
     if (isWhite()) {
@@ -163,6 +214,43 @@ FiveChesscanvas.onclick = (e)=>{
   } else { console.log('invalid click on the chessboard'); }
 }
 
+// refresh_has_stone(message) {{{
+function refresh_has_stone(message) {
+  for (let i = 0; i < 19; i++)
+    for (let j = 0; j < 19; j++)
+      has_stone[i][j] = flag_none;
+
+  for (let k = 0; k < 19; k++) {
+    let k_ = k+1;
+    let line = message.match(RegExp(`\\(${k_} \\(B( \\d{1,2})*\\) \\(W( \\d{1,2})*\\) \\(current( \\d{1,2})*\\)\\)`));
+    if (!line) {
+      alert("line is null!");
+    } else {
+      let str = line[0];
+      let str_B = str.match(/\(B( \d{1,2})*\)/)[0];
+      let str_W = str.match(/\(W( \d{1,2})*\)/)[0];
+      let ind_B = str_B.match(/\b\d{1,2}\b/g)
+      let ind_W = str_W.match(/\b\d{1,2}\b/g)
+      if (ind_B) {
+        ind_B.map((str)=>{
+          let i = Number(str) - 1;
+          let j = 19 - k_;
+          has_stone[i][j] = flag_black;
+        });
+      }
+      if (ind_W) {
+        ind_W.map((str)=>{
+          let i = Number(str) - 1;
+          let j = 19 - k_;
+          has_stone[i][j] = flag_white;
+        });
+      }
+    }
+  }
+
+}
+// }}}
+
 chess_http.onreadystatechange = ()=>{
   if (chess_http.readyState==4 && chess_http.status==200)
   {
@@ -170,39 +258,10 @@ chess_http.onreadystatechange = ()=>{
     console.log("receive from /Go:" + ret.split("'")[0]);
 
     if (/[ABCDEFGHJKLMNOPQRST]([1-9]|1\d)/.test(ret)) {
-
-      for (let i = 0; i < 19; i++)
-        for (let j = 0; j < 19; j++)
-          has_stone[i][j] = flag_none;
-
-      for (let k = 0; k < 19; k++) {
-        let k_ = k+1;
-        let line = ret.match(RegExp(`\\(${k_} \\(B( \\d{1,2})*\\) \\(W( \\d{1,2})*\\) \\(current( \\d{1,2})*\\)\\)`));
-        if (!line) {
-          alert("line is null!");
-        } else {
-          let str = line[0];
-          let str_B = str.match(/\(B( \d{1,2})*\)/)[0];
-          let str_W = str.match(/\(W( \d{1,2})*\)/)[0];
-          let ind_B = str_B.match(/\b\d{1,2}\b/g)
-          let ind_W = str_W.match(/\b\d{1,2}\b/g)
-          if (ind_B) {
-            ind_B.map((str)=>{
-              let i = Number(str) - 1;
-              let j = 19 - k_;
-              has_stone[i][j] = flag_black;
-            });
-          }
-          if (ind_W) {
-            ind_W.map((str)=>{
-              let i = Number(str) - 1;
-              let j = 19 - k_;
-              has_stone[i][j] = flag_white;
-            });
-          }
-        }
-      }
-      oneStep();
+      // An example ret:
+      // R4'((19 (B) (W) (current)) (18 (B) (W) (current)) (17 (B) (W) (current)) (16 (B) (W) (current)) (15 (B) (W) (current)) (14 (B) (W) (current)) (13 (B) (W) (current)) (12 (B) (W) (current)) (11 (B) (W) (current)) (10 (B) (W) (current)) (9 (B) (W) (current)) (8 (B) (W) (current)) (7 (B) (W) (current)) (6 (B) (W) (current)) (5 (B 11) (W) (current)) (4 (B) (W 17) (current 17)) (3 (B) (W) (current)) (2 (B) (W) (current)) (1 (B) (W) (current)))
+      refresh_has_stone(ret);
+      drawOneStep();
       // 恢复点击，继续下棋
       is_me = true;
 
@@ -218,8 +277,13 @@ chess_http.onreadystatechange = ()=>{
       clearBoard();
     } else if (/no engine/.test(ret)) {
       alert("没有启动引擎！");
+
     } else if (/gtp:/.test(ret)) {
-      
+      if (is_black) {
+        
+      } else {
+        
+      }
     } else if (/gtp error/.test(ret)) {
       alert("gtp error!");
     }
