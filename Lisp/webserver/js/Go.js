@@ -3,8 +3,8 @@ let chess_canvas = document.getElementById('ChessCanvas');
 let chess_div = chess_canvas.parentElement;
 // the following code don't work
 // the onresize event does work on div
-//chess_div.onresize = drawChessBoard;
-window.onresize = drawChessBoard;
+//chess_div.onresize = drawOneStep;
+window.onresize = drawOneStep;
 let context = chess_canvas.getContext('2d');
 
 // has_stone 标记棋盘上是否有棋子
@@ -17,6 +17,8 @@ let is_me_white = false;
 let engine_b = '';
 let engine_w = '';
 let is_black = true;
+let is_CvC = false;
+let is_CvC_started = false;
 //let is_over = false;
 let chess_http = new XMLHttpRequest();
 // 用来把字母横坐标映射成数
@@ -54,6 +56,8 @@ function onChessStart() {
     } else if (AGo_1) {
       chess_http.open('GET', `/Go/start/${player_id}/AGo`, true);
       chess_http.send();
+    } else {
+      alert('请选择引擎!'); return;
     }
   } else if (CvC) {
     if (leelaz_b) {
@@ -66,9 +70,10 @@ function onChessStart() {
     } else if (AGo_w) {
       engine_w = 'AGo';
     }
-    chess_http.open('GET', `/Go/start/${player_id}/${engine_b}`);
+    if (!leelaz_b || !leelaz_w) { alert('请选择引擎!'); return; }
+    chess_http.open('GET', `/Go/startCvC/${engine_b}/${engine_w}`);
     chess_http.send();
-    is_black = false;
+    setTimeout(()=>{is_CvC_started = true;}, 500);
   }
 }
 // }}}
@@ -196,7 +201,8 @@ chess_canvas.onclick = (e)=>{
   let j = Math.floor(y/30)-1;
   if (i>=0 && j>=0 &&
     has_stone[i][j] == flag_none &&
-    is_me) {
+    is_me &&
+    !is_CvC) {
 
     has_stone[i][j] = isWhite()? flag_white: flag_black;
     drawOneStep();
@@ -257,7 +263,8 @@ chess_http.onreadystatechange = ()=>{
     let ret = chess_http.responseText;
     console.log("receive from /Go:" + ret.split("'")[0]);
 
-    if (/[ABCDEFGHJKLMNOPQRST]([1-9]|1\d)/.test(ret)) {
+    if (/[ABCDEFGHJKLMNOPQRST]([1-9]|1\d)/.test(ret) &&
+    !/gtp:/.test(ret)) {
       // An example ret:
       // R4'((19 (B) (W) (current)) (18 (B) (W) (current)) (17 (B) (W) (current)) (16 (B) (W) (current)) (15 (B) (W) (current)) (14 (B) (W) (current)) (13 (B) (W) (current)) (12 (B) (W) (current)) (11 (B) (W) (current)) (10 (B) (W) (current)) (9 (B) (W) (current)) (8 (B) (W) (current)) (7 (B) (W) (current)) (6 (B) (W) (current)) (5 (B 11) (W) (current)) (4 (B) (W 17) (current 17)) (3 (B) (W) (current)) (2 (B) (W) (current)) (1 (B) (W) (current)))
       refresh_has_stone(ret);
@@ -271,21 +278,63 @@ chess_http.onreadystatechange = ()=>{
       alert("引擎已经启动！请重新开始或者继续对决");
     } else if (/stop ok/.test(ret)) {
       is_me = false;
+      is_CvC_started = false;
       alert("引擎已关闭")
     } else if (/clear_board ok/.test(ret)) {
+      is_black = true;
       is_me = true;
       clearBoard();
     } else if (/no engine/.test(ret)) {
       alert("没有启动引擎！");
 
+
+
+    } else if (/startCvC ok/.test(ret)) {
+      ;
     } else if (/gtp:/.test(ret)) {
-      if (is_black) {
-        
+      if (/[ABCDEFGHJKLMNOPQRST]([1-9]|1\d)/.test(ret)) {
+        // receiving from genmove
+
+        $('#CvC_one_step')[0].disabled = false;
+        //$('#CvC_Undo')[0].disabled = false;
+
+        refresh_has_stone(ret);
+        drawOneStep();
+
+        let pos = ret.match(/[ABCDEFGHJKLMNOPQRST](1\d|[1-9])/)[0];
+
+        if (engine_b != engine_w) {
+          // 当两个引擎不一致时, 需要两个引擎互相交互
+          if (is_black) {
+            // is_black表明生成的棋子是白棋, 下一步应该是黑棋下
+            chess_http.open('GET', `/Go/gtp/${engine_b}/play/w/${pos}`, true);
+            chess_http.send();
+          } else {
+            // 生成的棋子是黑棋, 下一步应该是白棋下
+            chess_http.open('GET', `/Go/gtp/${engine_w}/play/b/${pos}`, true);
+            chess_http.send();
+          }
+        }
       } else {
-        
+        // receiving from play
       }
     } else if (/gtp error/.test(ret)) {
       alert("gtp error!");
     }
   }
 };
+
+function CvC_one_step() {
+  if (!is_CvC_started) {alert('请先启动引擎!'); return;}
+  $('#CvC_one_step')[0].disabled = true;
+  //$('#CvC_Undo')[0].disabled = true;
+  if (is_black) {
+    chess_http.open('GET', `/Go/gtp/${engine_b}/genmove/b`, true);
+    chess_http.send();
+    is_black = !is_black;
+  } else {
+    chess_http.open('GET', `/Go/gtp/${engine_w}/genmove/w`, true);
+    chess_http.send();
+    is_black = !is_black;
+  }
+}

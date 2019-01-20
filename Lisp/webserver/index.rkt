@@ -18,11 +18,12 @@
 (struct UserInfo (username admin))
 
 ; 引擎同时只支持开一个，所以围棋同时只支持一个人在线
-(def eng #f)
+(def eng1 #f)
+(def eng2 #f)
 (def current-player #f)
 
 (def (set-engine! eng_) 
-  (set! eng eng_))
+  (set! eng1 eng_))
 
 (define-values (dispatch url)
   (dispatch-rules
@@ -258,12 +259,12 @@
      (let
        ([player_name (cadr path)]
         [engine_name (string->symbol (caddr path))])
-       (if (not eng)
+       (if (not eng1)
          (set-engine! (init-engine engine_name))
-         (when (not (eq? engine_name (engine-name eng)))
+         (when (not (eq? engine_name (engine-name eng1)))
            (print engine_name)
-           (print (engine-name eng))
-           ((engine-ctrl eng) 'kill)
+           (print (engine-name eng1))
+           ((engine-ctrl eng1) 'kill)
            (set-engine! (init-engine engine_name))))
        (if (not current-player)
          (begin
@@ -274,55 +275,83 @@
 
     [(and (string=? (car path) "play")
           (= (len path) 2))
-     (if (not eng)
+     (if (not eng1)
        (response/xexpr "no engine")
-       (let ([n (next-move (cadr path) eng)]
+       (let ([n (next-move (cadr path) eng1)]
              [board (with-output-to-string
-                      (λ () (print (find-board (engine-err eng)))))])
+                      (λ () (print (find-board (engine-err eng1)))))])
          (response/xexpr (string-append n board))))]
 
     [(and (string=? (car path) "clear_board")
           (= (len path) 1))
-     (if (not eng)
+     (if (not eng1)
        (response/xexpr "no engine")
        (begin
-         (write-gtp "clear_board" eng)
-         (let ([ret (read-gtp eng)])
-           (if (string=? "= " ret)
+         (write-gtp "clear_board" eng1)
+         (when eng2 (write-gtp "clear_board" eng2))
+         (let ([ret1 (read-gtp eng1)]
+               [ret2 (read-gtp eng2)])
+           (if (and (string=? "= " ret1) (string=? "= " ret2))
              (response/xexpr "clear_board ok")
-             (response/xexpr ret)))))]
+             (response/xexpr (string-append ret1 ";" ret2))))))]
 
     ; stop 负责关闭engine
     [(and (string=? (car path) "stop")
           (= (len path) 1))
-     (if (not eng)
-       (response/xexpr "no engine")
-       (if (begin (write-gtp "quit" eng)
-                  (string=? "= " (read-gtp eng)))
-         (begin
-           (set! current-player #f) (set! eng #f)
-           (response/xexpr "stop ok"))
-         (response/xexpr "stop error")))]
+     (when eng1
+       (write-gtp "quit" eng1)
+       (read-gtp eng1)
+       (set! eng1 #f))
+     (when eng2
+       (write-gtp "quit" eng2)
+       (read-gtp eng2)
+       (set! eng2 #f))
+     (set! current-player #f)
+     (response/xexpr "stop ok")]
     ; }}}
     ; 负责机器与机器交战的逻辑 {{{
     ; 由于机器与机器交战不需要复杂的逻辑（只需要你一步我一步地下棋）
     ; 所以可以直接将url直接解析成gtp协议的命令（空格替换成斜杠）
+    [(and (string=? (car path) "startCvC")
+          (= (len path) 3))
+     (let ([eng1-name (string->symbol (cadr path))]
+           [eng2-name (string->symbol (caddr path))])
+       (when eng1 (write-gtp "quit" eng1) (read-gtp eng1))
+       (when eng2 (write-gtp "quit" eng2) (read-gtp eng2))
+       (if (eq? eng1-name eng2-name)
+         (set! eng1 (init-engine eng1-name))
+         (begin
+           (set! eng1 (init-engine eng1-name))
+           (set! eng2 (init-engine eng2-name))))
+
+       (response/xexpr "startCvC ok"))]
+
+    ; 拓展了gtp协议, genmove会附带棋盘的信息(find-board的返回值)
     [(string=? (car path) "gtp")
-     (let* ([cmd (string-append
-                   (cadr path)
+     (let* ([eng_name (string->symbol (cadr path))]
+            [eng_ (if (eq? eng_name (engine-name eng1))
+                    eng1
+                    (if (eq? eng_name (engine-name eng2))
+                      eng2
+                      #f))]
+            [cmd (string-append
+                   (caddr path)
                    (apply string-append
                           (map (λ (s) (string-append " " s))
-                               (cddr path))))]
+                               (cdddr path))))]
             [resp (begin 
-                    (display "Writing gtp to ")  (displayln (engine-name eng))
+                    (display "Writing gtp to ")  (displayln (engine-name eng_))
                     (println cmd)
-                    (write-gtp cmd eng)
-                    (read-gtp eng))])
-       (display "Read from ")  (displayln (engine-name eng))
-       (println cmd)
-       (if resp (string-append "gtp:" (response/xexpr resp))
+                    (write-gtp cmd eng_)
+                    (read-gtp eng_))]
+            [board (if (string=? "genmove" (caddr path))
+                     (with-output-to-string
+                       (λ () (write-gtp "showboard" eng_) (read-gtp eng_)
+                         (print (find-board (engine-err eng_)))))
+                     "")])
+       (if resp (response/xexpr (string-append "gtp:" resp board))
          (response/xexpr "gtp error")))]))
-    ; }}}
+; }}}
 ; }}}
 
 

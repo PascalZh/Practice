@@ -64,6 +64,8 @@
       </div>
     </div>
 
+    <button class="btn btn-dark" id='CvC_one_step' onclick="CvC_one_step()" hidden>One Step</button>
+    <button class="btn btn-dark" id='CvC_Undo' onclick="CvC_undo_one_step()" hidden disabled>Undo</button>
     <button class="btn btn-dark" onclick="onChessStart()">Start</button>
     <button class="btn btn-dark" onclick="onChessRestart()">Restart</button>
     <button class="btn btn-dark" onclick="onChessStop()">Stop</button>
@@ -77,12 +79,23 @@
   $('#CvC_row')[0].style.display="none";
   $('#PvC_row')[0].style.display="flex";
   $('input[type=radio][name=pk]').change(()=>{
+  
   if ($('#PvC')[0].checked) {
+  
+    is_CvC=false;
+    $('#CvC_one_step')[0].hidden=true;
+    $('#CvC_Undo')[0].hidden=true;
     $('#CvC_row')[0].style.display="none";
     $('#PvC_row')[0].style.display="flex";
+    
   } else if ($('#CvC')[0].checked) {
+  
+    is_CvC=true;
+    $('#CvC_one_step')[0].hidden=false;
+    $('#CvC_Undo')[0].hidden=false;
     $('#CvC_row')[0].style.display="flex";
     $('#PvC_row')[0].style.display="none";
+    
   }});
 </script>
 
