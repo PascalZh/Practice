@@ -8,19 +8,70 @@ bool check_valid(const Action & a, const Board & b)
 
 Move check_eye(const Action & a, const Board & b)
 {
-  return ret; 
+  return Move(); 
 }
 
 bool move(Tree * cur_node, Tree * next_node, Board b)
 {
   auto a = next_node -> a;
   if ( check_valid(a, b) ) {
-    b[a] = static_cast<std::string>(a)[0] == 'b' ? BoardFlag::black : BoardFlag::white;
+    b[a] = static_cast<std::string>(a)[0] == 'b' ?
+      BoardFlag::black : BoardFlag::white;
   }
   else return false;
 }
 
-inline bool is_node_root(const Tree *node) { return node->a == Action::root; }
+unsigned get_seed()
+{
+  typedef std::chrono::high_resolution_clock hclock;
+  unsigned seed = hclock::now().time_since_epoch().count();
+  seed ^= std::hash<std::thread::id>()(std::this_thread::get_id());
+  return seed;
+}
+
+std::tuple<col_t, row_t> str2coord(const std::string &ind)
+{
+  col_t col_ind = COLUMN_INDICES.find( ind[0] );
+  row_t row_ind;
+  std::stringstream ss(ind.substr(1)); // eg. turn "19"(string) to 19(int)
+  ss >> row_ind;
+
+  return std::make_tuple(col_ind, row_ind - 1);
+}
+
+// ************** class Action ************** {{{
+#define THROW_ACTION_CONVERSION_ERR throw \
+  std::runtime_error("Action conversion error.")
+
+Action::Action(const std::string &action)
+{
+  if (action.size() < 3)      THROW_ACTION_CONVERSION_ERR;
+  if (action[0] == 'b')       this->code = 0;
+  else if (action[0] == 'w')  this->code = MAX_STONE_NUM;
+  else                        THROW_ACTION_CONVERSION_ERR;
+  col_t col; row_t row;
+  std::tie(col, row) = str2coord(action.substr(1));
+  if (col > 18 || row > 18)  THROW_ACTION_CONVERSION_ERR;
+  this->code += col + row * 19;
+}
+
+Action::operator std::string()
+{
+  col_t col = this->code % MAX_STONE_NUM % 19;
+  row_t row = this->code % MAX_STONE_NUM / 19;
+  std::string ret;
+  std::stringstream ss;
+  ss << row + 1; ss >> ret;            // now ret should be e.g. 2, 9, 15
+  ret = COLUMN_INDICES[col] + ret; // now ret should be e.g. A2, B9, T15
+  ret = (this->code < MAX_STONE_NUM?'b':'w') + ret;
+                                   // now ret should be e.g. bA2, wB9, bT15
+  return ret;
+}
+
+#undef THROW_ACTION_CONVERSION_ERR
+// }}}
+
+// ************** MonteCarloTree ************** {{{
 
 void MonteCarloTree::expand()
 {
@@ -28,7 +79,7 @@ void MonteCarloTree::expand()
 
   // enumerate moves that are valid
   bool is_next_step_black = static_cast<std::string>
-      (_cur_node->a)[0] == 'r' || 'w' ?
+    (_cur_node->a)[0] == 'r' || 'w' ?
     true : false;
   char a[5] = "xxxx";
   for ( auto col : "ABCDEFGHJKLMNOPQRST" )
@@ -52,6 +103,7 @@ void MonteCarloTree::expand()
     _cur_node -> append_child(move);
   }
 }
+
 void MonteCarloTree::simulate()
 {
   auto children = _cur_node -> children;
@@ -59,20 +111,17 @@ void MonteCarloTree::simulate()
 
   }
 }
+
 void MonteCarloTree::back_propagation()
 {
 
 }
-unsigned get_seed()
-{
-  typedef std::chrono::high_resolution_clock hclock;
-  unsigned seed = hclock::now().time_since_epoch().count();
-  seed ^= std::hash<std::thread::id>()(std::this_thread::get_id());
-  return seed;
-}
 
-void Tree::add_dirichlet_noise(float epsilon = 0.25, float alpha = 0.03) // epsilon and alpha could be found in the paper.
-{
+// }}}
+
+// *************** class Tree *************** {{{
+void Tree::add_dirichlet_noise(float epsilon = 0.25, float alpha = 0.03)
+{ // epsilon and alpha could be found in the paper.
   auto child_cnt = children.size();
 
   auto dirichlet_vector = std::vector<float>{};
@@ -101,3 +150,13 @@ void Tree::add_dirichlet_noise(float epsilon = 0.25, float alpha = 0.03) // epsi
     child->p = child->p * (1 - epsilon) + epsilon * eta_a;
   }
 }
+void Tree::append_child(const Move & m)
+{
+  Action a_; Prisoners prisoners_;
+  std::tie(a_, prisoners_) = m;
+  Tree * child = new Tree(a_, prisoners_);
+  child->parent = this;
+  children.push_back(child);
+}
+
+// }}}
