@@ -3,6 +3,7 @@
 
 #include <functional>
 #include <vector>
+#include <memory>
 #include <tuple>
 #include <forward_list>
 
@@ -21,6 +22,9 @@
 #include <Python.h>
 
 using std::cout; using std::cin; using std::endl;
+using std::vector; using std::unique_ptr;
+using std::thread;
+
 const std::string COLUMN_INDICES = "ABCDEFGHJKLMNOPQRST";
 
 class Action;
@@ -39,15 +43,18 @@ using Selector = std::function<State (State)>;
 // param: current node; return: node
 using Pruner = std::function<void (std::vector<Move>, Board)>;
 using Simulator = std::function<void ()>;
+using col_t = size_t;
+using row_t = size_t;
 
 extern bool check_valid(const Action &, const Board &);
 extern Move check_eye(const Action &, const Board &);
 // check whether there exists an eye once action taken.
 extern bool move(Tree *, Tree *, Board);
 extern unsigned get_seed();
-using col_t = size_t;
-using row_t = size_t;
 extern std::tuple<col_t, row_t> str2coord(const std::string &s);
+
+// interface with python
+extern unique_ptr<vector<float>> py_list2array(PyObject *list);
 
 class Action {
   private:
@@ -112,12 +119,12 @@ struct Board {
 class MonteCarloTree
 {
   public:
-    MonteCarloTree(Selector selector_)
-      :_cur_root(new Tree(Action("root"))), _selector(selector_)
-    {}
+    MonteCarloTree(Selector selector_, Pruner pruner_ = nullptr)
+      :_cur_root(new Tree(Action("root"))), _selector(selector_),
+      _pruner(pruner_) {}
   private:
     inline void select();
-    void expand();
+    inline void expand();
     inline void simulate();
     inline void back_propagation();
 
@@ -142,6 +149,19 @@ class MonteCarloTree
     Pruner _pruner, _pre_pruner;
     // _pre_pruner could be a CNN or other things, it works during expansion.
     // _pruner will work during simulate? I'm not sure.
+};
+
+class AGoTree : MonteCarloTree {
+  static const Selector PUCT;
+  AGoTree() :MonteCarloTree(PUCT) { init_nn(); }
+  ~AGoTree() { stop_nn(); }
+  void start_search_loop();
+  private:
+  bool is_nn_ready;
+  void init_python();
+  void stop_python();
+  void init_nn();
+  void stop_nn();
 };
 
 #endif /* ifndef __AGO_H__ */

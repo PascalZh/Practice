@@ -39,6 +39,23 @@ std::tuple<col_t, row_t> str2coord(const std::string &ind)
   return std::make_tuple(col_ind, row_ind - 1);
 }
 
+unique_ptr<vector<float>> py_list2array(PyObject *list)
+{
+  auto ret = std::make_unique<vector<float>>();
+  PyObject *iter = PyObject_GetIter(list);
+
+  if (!iter)
+    cout << "iter error!" << endl;
+
+  while (true) {
+    PyObject *next = PyIter_Next(iter);
+    if (!next) break;
+    ret->push_back(PyFloat_AsDouble(next));
+    cout << ret->back() << endl;
+  } 
+  return ret;
+}
+
 // ************** class Action ************** {{{
 #define THROW_ACTION_CONVERSION_ERR throw \
   std::runtime_error("Action conversion error.")
@@ -71,7 +88,7 @@ Action::operator std::string()
 #undef THROW_ACTION_CONVERSION_ERR
 // }}}
 
-// ************** MonteCarloTree ************** {{{
+// ************** class MonteCarloTree ************** {{{
 
 void MonteCarloTree::expand()
 {
@@ -114,12 +131,15 @@ void MonteCarloTree::simulate()
 
 void MonteCarloTree::back_propagation()
 {
+}
 
+void MonteCarloTree::start_search_loop()
+{
 }
 
 // }}}
 
-// *************** class Tree *************** {{{
+// *************** struct Tree *************** {{{
 void Tree::add_dirichlet_noise(float epsilon = 0.25, float alpha = 0.03)
 { // epsilon and alpha could be found in the paper.
   auto child_cnt = children.size();
@@ -159,4 +179,37 @@ void Tree::append_child(const Move & m)
   children.push_back(child);
 }
 
+// }}}
+
+// *************** class AGoTree *************** {{{
+void AGoTree::init_python()
+{
+  Py_Initialize();
+  std::system("export PYTHONPATH=.:$PYTHONPATH");
+}
+void AGoTree::stop_python()
+{
+  Py_Finalize();
+}
+void AGoTree::init_nn()
+{
+  init_python();
+  auto module = PyImport_Import(PyUnicode_FromString("AGo"));
+  if (!module) {
+    cout << "from AGoTree::init_python()\nmodule AGo import fail!" << endl;
+    this->is_nn_ready = false;
+    return;
+  }
+  auto func = PyObject_GetAttrString(module, "init_nn");
+  if (!func || !PyCallable_Check(func))
+  {
+    cout << "function import fail!" << endl;
+    return;
+  }
+}
+void AGoTree::stop_nn()
+{
+  // 
+  stop_python();
+}
 // }}}
