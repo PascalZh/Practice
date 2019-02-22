@@ -1,8 +1,12 @@
 test_objects := build/test.o build/AGo.o
 test_c := test/test.cpp AGo.cpp
-LDFLAGS := $(shell python3.5-config --ldflags)
-CFLAGS := $(shell python3.5-config --cflags)
+#LDFLAGS := $(shell python3.5-config --ldflags)
+#CFLAGS := $(shell python3.5-config --cflags)
+
 CFLAGS += -std=c++1y
+#-I$(shell echo $$BOOST_INCLUDE_PATH)
+LDFLAGS += -lfmt -lpthread -lboost_filesystem -lboost_system
+
 $(shell if [ ! -d build ]; then mkdir build; fi)
 
 Test : $(test_objects)

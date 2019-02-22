@@ -6,26 +6,32 @@
 #include <memory>
 #include <tuple>
 #include <forward_list>
+#include <array>
+#include <map>
 
 #include <iostream>
 #include <string>
-#include <sstream>
-#include <cstring>
 
 #include <algorithm>
 #include <stdexcept>
 #include <chrono>
+
 #include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <atomic>
+
 #include <limits>
 #include <random>
 
-#include <Python.h>
+#include <fmt/format.h>
+#include <fmt/ostream.h>
 
-using std::cout; using std::cin; using std::endl;
-using std::vector; using std::unique_ptr;
-using std::thread;
+#include <boost/lexical_cast.hpp>
+#include <boost/process.hpp>
+#include <boost/asio.hpp>
 
-const std::string COLUMN_INDICES = "ABCDEFGHJKLMNOPQRST";
+//#include <Python.h>
 
 class Action;
 struct Tree;
@@ -39,7 +45,6 @@ using Move = std::tuple<Action, Prisoners>;
 // Move is light version of Tree removing children and parent;
 using State = std::tuple<Tree *, Board>;
 
-using Selector = std::function<State (State)>;
 // param: current node; return: node
 using Pruner = std::function<void (std::vector<Move>, Board)>;
 using Simulator = std::function<void ()>;
@@ -54,7 +59,7 @@ extern unsigned get_seed();
 extern std::tuple<col_t, row_t> str2coord(const std::string &s);
 
 // interface with python
-extern unique_ptr<vector<float>> py_list2array(PyObject *list);
+//extern unique_ptr<vector<float>> py_list2array(PyObject *list);
 
 class Action {
   private:
@@ -75,18 +80,20 @@ class Action {
 };
 
 struct Tree {
-  Tree * parent;
   Action a; // eg: a = "bA12", "wP2"   b is black, w is white
+  Tree * parent;
   Prisoners prisoners; // once this action has captured opponent's stones,
   // these stones will be recorded in this variable.
   std::vector<Tree *> children;
 
   float w; unsigned n;
   float p;
+  thread_local static unsigned seed;
 
-  explicit Tree( const Action & a_ ) : a(a_) {}
-  Tree(const Action & a_, const Prisoners & prisoners_)
-    : a(std::move(a_)), prisoners(std::move(prisoners_)) {}
+  explicit Tree(const Action & a_, Tree *parent_)
+    : a(std::move(a_)), parent(parent_) {}
+  Tree(const Action & a_, Tree *parent_, const Prisoners & prisoners_)
+    : a(std::move(a_)), parent(parent_), prisoners(std::move(prisoners_)) {}
   ~Tree() {
     std::for_each(children.begin(), children.end(),
         [](Tree * node) { delete node; });
@@ -119,16 +126,16 @@ struct Board {
 class MonteCarloTree
 {
   public:
-    MonteCarloTree(Selector selector_, Pruner pruner_ = nullptr)
-      :_cur_root(new Tree(Action("root"))), _selector(selector_),
+    MonteCarloTree(Pruner pruner_ = nullptr)
+      :_cur_root(new Tree(Action::none, nullptr)),
       _pruner(pruner_) {}
   private:
-    inline void select();
-    inline void expand();
-    inline void simulate();
-    inline void back_propagation();
+    void select();
+    void expand();
+    void simulate();
+    void back_propagation();
 
-    inline void search() { select(); expand(); simulate(); back_propagation(); }
+    void search() { select(); expand(); simulate(); back_propagation(); }
 
   public:
     void start_search_loop();
@@ -145,23 +152,41 @@ class MonteCarloTree
     Board _cur_board; // corresponds to _cur_node.
     std::vector<Move> _valid_moves;
 
-    Selector _selector;
     Pruner _pruner, _pre_pruner;
     // _pre_pruner could be a CNN or other things, it works during expansion.
     // _pruner will work during simulate? I'm not sure.
 };
 
 class AGoTree : MonteCarloTree {
-  static const Selector PUCT;
-  AGoTree() :MonteCarloTree(PUCT) { init_nn(); }
-  ~AGoTree() { stop_nn(); }
-  void start_search_loop();
+  public:
+    AGoTree()
+    {
+      init_nn();
+      if (ref_count > 0)
+        throw std::runtime_error("AGoTree created more than 1 objects!");
+      else ++ref_count;
+    }
+    ~AGoTree() { stop_nn(); }
+    void start_search_loop();
   private:
-  bool is_nn_ready;
-  void init_python();
-  void stop_python();
-  void init_nn();
-  void stop_nn();
+    static const std::function<float ()> PUCT;
+    static int ref_count;
+    static std::vector<std::tuple<unsigned long,std::array<float,362>>> pvs;
+
+    // Only one object is allowed to exist at the same time
+    bool is_nn_ready;
+    void init_nn();
+    void stop_nn();
+
+    // threaded search
+    static void search();
+    static void retrieve_pv();
+    // io
+    static std::string buf;
+    static boost::process::ipstream task_in;
+    static boost::process::opstream task_out;
+    static boost::process::child *p_c;
+
 };
 
 #endif /* ifndef __AGO_H__ */

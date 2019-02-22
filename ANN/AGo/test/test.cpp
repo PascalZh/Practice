@@ -1,13 +1,19 @@
-#include <cstdlib>
-#include <memory>
 #include "../AGo.h"
-
 
 using std::cout; using std::cin; using std::endl;
 #define PRT_TST(exp) cout << #exp "\t= " << exp << endl
 class MarkTest { public: MarkTest(std::string s) : _s(s){cout << "<<<<<<<<<<<<<<<< " << s << ":" << endl;}
   std::string _s; ~MarkTest() {cout << ">>>>>>>>>>>>>>>> " << _s << " finish" << endl << endl;} };
 #define MARKTEST(s) MarkTest marktest(s)
+
+void testRandom()
+{
+  MARKTEST("testRandom");
+  for (int i = 0; i < 1000; i++) {
+    cout << get_seed() << endl;
+  }
+
+}
 
 void testTree()
 {
@@ -39,21 +45,40 @@ void testAction()
 
 }
 
-void show_id()
+/*
+void show_id(PyObject * pFunc)
 {
   auto thread_id = std::this_thread::get_id();
-  cout << "thread id:" << thread_id << endl;
+  cout << "thread id: {}"_format(thread_id) << endl;
+
+  PyGILState_STATE gstate;
+  gstate = PyGILState_Ensure();
+  
+  auto args = Py_BuildValue("(s)", "{}"_format(thread_id).c_str());
+  // can't call python function at the same time!
+  auto ret = PyObject_CallObject(pFunc, args);
+  Py_DECREF(ret);
+  
+  PyGILState_Release(gstate);
 }
 
-void testPython()
+void testPython(char * argv0)
 {
   MARKTEST("testPython");
   auto thread_id = std::this_thread::get_id();
-  cout << "main thread: " << thread_id << endl;
+  cout << "main thread: {}"_format(thread_id) << endl;
 
+  size_t len_argv0 = std::strlen(argv0);
+  Py_SetProgramName(Py_DecodeLocale(argv0, &len_argv0));
   Py_Initialize();
-  std::system("export PYTHONPATH=.:$PYTHONPATH");
-  // This is very important!!!
+
+  std::string pwd_ = std::getenv("PWD");
+  std::wstring pwd; pwd.assign(pwd_.begin(), pwd_.end());
+  auto pythonhome = Py_GetPythonHome();
+  std::wstring path = pythonhome?pythonhome:L"";
+  path = path.size()?path + L":" + pwd:pwd;
+  Py_SetPythonHome(const_cast<wchar_t *>(path.c_str()));
+  std::wcout << "PYTHONHOME:" << Py_GetPythonHome() << endl;
 
   auto pModule = PyImport_Import(PyUnicode_FromString("test.test_python"));
   if (!pModule) {
@@ -70,11 +95,10 @@ void testPython()
   }
   cout << "function import succeed!" << endl;
 
-  std::string str_thread_id;
-  std::stringstream ss; ss << thread_id;
-  ss >> str_thread_id;
+  PyEval_InitThreads(); 
+  PyEval_ReleaseThread(PyThreadState_Get());  
 
-  auto args = Py_BuildValue("(s)", str_thread_id.c_str());
+  auto args = Py_BuildValue("(s)", "{}"_format(thread_id).c_str());
   auto pRet = PyObject_CallObject(pFunc, args);
 
   auto ret = py_list2array(pRet);
@@ -84,20 +108,25 @@ void testPython()
 
   std::vector<std::thread> tasks;
   for (unsigned i = 0; i < std::thread::hardware_concurrency(); i++)
-    tasks.push_back(std::thread(show_id));
+    tasks.push_back(std::thread(show_id, pFunc));
   for (auto &task : tasks)
     task.join();
 
+  Py_DECREF(pModule); Py_DECREF(pFunc);
   Py_Finalize();
 }
+*/
 int main(int argc, char *argv[])
 {
+  testRandom();
   testTree();
   testAction();
-  testPython();
   PRT_TST(sizeof(unsigned));
-  PRT_TST(sizeof(unsigned int));
-  PRT_TST(sizeof(short));
   PRT_TST(sizeof(int32_t));
+
+  AGoTree t;
+  t.start_search_loop();
+  cout << "test finish..." << endl;
+
   return 0;
 }
