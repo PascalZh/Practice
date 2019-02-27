@@ -1,5 +1,5 @@
-#ifndef __AGO_H__
-#define __AGO_H__
+#ifndef AGO_H_
+#define AGO_H_
 
 #include <functional>
 #include <vector>
@@ -13,6 +13,7 @@
 #include <string>
 
 #include <algorithm>
+#include <cassert>
 #include <stdexcept>
 #include <chrono>
 
@@ -29,164 +30,183 @@
 
 #include <boost/lexical_cast.hpp>
 #include <boost/process.hpp>
-#include <boost/asio.hpp>
 
 //#include <Python.h>
 
-class Action;
-struct Tree;
-struct Board;
-class MonteCarloTree;
-enum class BoardFlag : char { none, white, black };
+namespace ago {
 
-using Position = Action;
-using Prisoners = std::forward_list<Position>;
-using Move = std::tuple<Action, Prisoners>;
-// Move is light version of Tree removing children and parent;
-using State = std::tuple<Tree *, Board>;
+  using namespace fmt::literals; using fmt::print;
+  namespace bp = boost::process;
+  using boost::lexical_cast;
+  using std::cout; using std::cin; using std::endl;
+  using std::string; using std::vector; using std::map; using std::array; using std::tuple;
+  using std::function; using std::for_each;
+  using std::unique_ptr; using std::shared_ptr; using std::make_shared;
+  using std::make_unique; using std::thread; using std::mutex; using std::atomic;
+  using std::condition_variable; using std::unique_lock;
 
-// param: current node; return: node
-using Pruner = std::function<void (std::vector<Move>, Board)>;
-using Simulator = std::function<void ()>;
-using col_t = size_t;
-using row_t = size_t;
+  class Action;
+  struct Tree;
+  struct Board;
+  class MonteCarloTree;
 
-extern bool check_valid(const Action &, const Board &);
-extern Move check_eye(const Action &, const Board &);
-// check whether there exists an eye once action taken.
-extern bool move(Tree *, Tree *, Board);
-extern unsigned get_seed();
-extern std::tuple<col_t, row_t> str2coord(const std::string &s);
+  enum class board_flag : char { none=0, black, white, eye_b, eye_w };
+  board_flag &operator+=(board_flag &lhs, const int &rhs);
+  board_flag &operator-=(board_flag &lhs, const int &rhs);
+  using bf = board_flag;
 
-// interface with python
-//extern unique_ptr<vector<float>> py_list2array(PyObject *list);
+  using Stone = Action;
+  using Prisoners = std::forward_list<Stone>;
+  using Move = tuple<Action, Prisoners>;
+  // Move is light version of Tree removing children and parent;
+  using State = tuple<Tree *, Board>;
 
-class Action {
-  private:
-    using code_t = uint16_t;
-    code_t code;
-    static constexpr code_t MAX_STONE_NUM = 19 * 19;
+  // param: current node; return: node
+  using Pruner = function<void (vector<Move>, Board)>;
+  using Simulator = function<void ()>;
+  using col_t = size_t;
+  using row_t = size_t;
+
+  namespace utils {
+
+    extern unsigned get_seed();
+    extern tuple<col_t, row_t> str2coord(const string &s);
+
+  }
+
+  // Other:
+
+  // interface with python
+  //extern unique_ptr<vector<float>> py_list2array(PyObject *list);
+
+  class Action {
     // 0 ~ MAX_STONE_NUM - 1             : bA1 ~ bT19
     // MAX_STONE_NUM ~ 2 * MAX_STONE_NUM - 1 : wA1 ~ wT19
     // 2 * MAX_STONE_NUM                 : none
+    private:
+      using code_t = uint16_t;
+      code_t code;
+      static constexpr code_t MAX_STONE_NUM = 19 * 19;
 
-  public:
-    static const Action none; // Action is default to be none.
-    Action() : code(2 * MAX_STONE_NUM) {}
-    explicit Action(const std::string &action);
-    operator std::string();
-    bool operator ==(const Action &rhs) const { return code == rhs.code; }
-    bool operator !=(const Action &rhs) const { return code != rhs.code; }
-};
+    public:
+      static const string column_indices;
+      static const Action none; // Action is default to be none.
+      Action() : code(2 * MAX_STONE_NUM) {}
+      Action(bf color, col_t col, row_t row);
+      explicit Action(const string &action);
+      operator string() const;
 
-struct Tree {
-  Action a; // eg: a = "bA12", "wP2"   b is black, w is white
-  Tree * parent;
-  Prisoners prisoners; // once this action has captured opponent's stones,
-  // these stones will be recorded in this variable.
-  std::vector<Tree *> children;
+      bf color() const;
+      tuple<col_t,row_t> coord() const;
+      inline bool operator ==(const Action &rhs) const { return code == rhs.code; }
+      inline bool operator !=(const Action &rhs) const { return code != rhs.code; }
+  };
 
-  float w; unsigned n;
-  float p;
-  thread_local static unsigned seed;
+  struct Tree {
+    Action a; // eg: a = "bA12", "wP2"   b is black, w is white
+    Tree *parent;
+    vector<Tree *> children;
+    Prisoners prisoners; // once this action has captured opponent's stones,
+    // these stones will be recorded in this variable.
 
-  explicit Tree(const Action & a_, Tree *parent_)
-    : a(std::move(a_)), parent(parent_) {}
-  Tree(const Action & a_, Tree *parent_, const Prisoners & prisoners_)
-    : a(std::move(a_)), parent(parent_), prisoners(std::move(prisoners_)) {}
-  ~Tree() {
-    std::for_each(children.begin(), children.end(),
-        [](Tree * node) { delete node; });
-  }
+    float w; unsigned n; // notation is consistent with the paper
+    float p;
+    unique_ptr<float[]> dist;
+    thread_local static unsigned seed;
 
-  void append_child(const Move & m);
-  bool is_leaf() { return children.empty(); }
+    Tree(const Action & a_ = Action::none)
+      : a(a_), parent(nullptr), w(0.0f), n(0), p(0), dist{} {}
+    ~Tree() {for_each(children.begin(), children.end(), [](Tree *node){delete node;});}
 
-  void add_dirichlet_noise(float epsilon, float alpha);
-};
+    inline bool is_leaf() const { return children.empty(); }
+    void push_back_child(const Action &a, Board &b);
+    inline void erase_children(vector<Tree *>::iterator itr);
+    inline void clear_children();
 
-struct Board {
-  BoardFlag _board[19][19];
-  Board() {
-    for (int i = 0; i < 19; i++)
-      for (int j = 0; j < 19; j++)
-        _board[i][j] = BoardFlag::none;
-  }
+    void add_dirichlet_noise(float epsilon, float alpha);
+    static bool check_valid(const Action &, Board &);
+    // check whether there exists an eye once action taken.
+    static void move(Tree *, Tree *, Board &);
+    static void undo_move(Tree *, Board &);
 
-  BoardFlag & operator [](const std::string & ind)
+    private:
+    Tree(const Action &a_, Tree *parent_, Prisoners && p)
+      : a(a_), parent(parent_), prisoners(p), w(0.0f), n(0), p(0), dist{} {}
+
+    Move action2move(const Action &a, Board &b);
+  };
+
+  struct Board {
+    static const tuple<col_t,row_t> no_stones;
+
+    bf _board[19][19];
+    tuple<col_t, row_t> _cur_stone = no_stones;
+    Board();
+
+    inline bf &operator [](const string & ind) { return (*this)[utils::str2coord(ind)]; }
+    inline bf &operator [](const tuple<col_t,row_t> &coord);
+    inline bf *operator [](int i) { assert(i < 19); return _board[i]; }
+
+    friend std::ostream &operator <<(std::ostream &out, Board &board);
+  };
+
+  class MonteCarloTree
   {
-    col_t col_ind; row_t row_ind;
-    std::tie(col_ind, row_ind) = str2coord(ind);
-    if ( col_ind > 18 || row_ind > 18  ) // unsigned variable is always >= 0
-      throw std::range_error("AGo::Board index out of range!");
-    return _board[col_ind][row_ind];
-  }
-};
+    public:
+      MonteCarloTree(Pruner);
+    protected:
+      using F = function<void ()>;
+      // you can pass any arg through lambda's capture feature
+      F select;
+      F expand;
+      F simulate;
+      F back_propagation;
 
-class MonteCarloTree
-{
-  public:
-    MonteCarloTree(Pruner pruner_ = nullptr)
-      :_cur_root(new Tree(Action::none, nullptr)),
-      _pruner(pruner_) {}
-  private:
-    void select();
-    void expand();
-    void simulate();
-    void back_propagation();
+      void search() { select(); expand(); simulate(); back_propagation(); }
 
-    void search() { select(); expand(); simulate(); back_propagation(); }
+    public:
+      void start_search_loop();
+      ~MonteCarloTree ();
 
-  public:
-    void start_search_loop();
-    ~MonteCarloTree ()
-    {
-      while (_cur_root->a != Action::none)
-        _cur_root = _cur_root -> parent;
-      delete _cur_root;
-    }
+    protected:
+      Tree *_cur_node; // it refers to current state of play during the game.
+      Board _cur_board; // corresponds to _cur_node.
+      vector<Move> _valid_moves;
+      Pruner _pruner, _pre_pruner;
+  };
 
-  private:
-    Tree * _cur_root; // it refers to current state of play during the game.
-    Tree * _cur_node; // it refers to current state of play during the MCTS.
-    Board _cur_board; // corresponds to _cur_node.
-    std::vector<Move> _valid_moves;
+  class AGoTree : MonteCarloTree {
+    public:
+      AGoTree();
+      ~AGoTree();
+      void start_search_loop();
+    private:
+      function<float (Tree *)> PUCT;
+      static int ref_count; // Only one object is allowed to exist at the same time
 
-    Pruner _pruner, _pre_pruner;
-    // _pre_pruner could be a CNN or other things, it works during expansion.
-    // _pruner will work during simulate? I'm not sure.
-};
+      bool is_nn_ready;
+      void init_nn();
+      void stop_nn();
 
-class AGoTree : MonteCarloTree {
-  public:
-    AGoTree()
-    {
-      init_nn();
-      if (ref_count > 0)
-        throw std::runtime_error("AGoTree created more than 1 objects!");
-      else ++ref_count;
-    }
-    ~AGoTree() { stop_nn(); }
-    void start_search_loop();
-  private:
-    static const std::function<float ()> PUCT;
-    static int ref_count;
-    static std::vector<std::tuple<unsigned long,std::array<float,362>>> pvs;
+      // threaded search
+      void search();
+      void retrieve_pv();
 
-    // Only one object is allowed to exist at the same time
-    bool is_nn_ready;
-    void init_nn();
-    void stop_nn();
+      // io
+      boost::process::ipstream task_in;
+      boost::process::opstream task_out;
+      boost::process::child *p_c;
 
-    // threaded search
-    static void search();
-    static void retrieve_pv();
-    // io
-    static std::string buf;
-    static boost::process::ipstream task_in;
-    static boost::process::opstream task_out;
-    static boost::process::child *p_c;
+      size_t core_num;
+      map<unsigned long,unique_ptr<float[]>> pvs;
+      // buffer that store (p, v) result of nn.
+      vector<unique_ptr<Tree>> trees;
 
-};
+      // constant
+      float c_puct;
+  };
 
-#endif /* ifndef __AGO_H__ */
+}
+
+#include "AGo.inl"
+#endif /* ifndef AGO_H_ */
