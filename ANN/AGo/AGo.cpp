@@ -316,7 +316,7 @@ namespace ago {
       print(color + "Thread {0} init! seed({1})\n"_format(id, Tree::seed)
           + reset);
       g_forbid_access_pvs[task_id] = true;
-      task_out << "start {}"_format(id) << endl;
+      task_out << "start_thread {}"_format(id) << endl;
     }
 
     auto get_game_state = [] (Tree *node, Board b)
@@ -417,7 +417,7 @@ namespace ago {
 
     unique_lock<mutex> lck(mtx);
     trees.push_back(unique_ptr<Tree>(root));
-    task_out << "exit {}"_format(id) << endl;
+    task_out << "exit_thread {}"_format(id) << endl;
     print(color+"Thread {} exited normally...\n"_format(id)+reset);
   }
 
@@ -460,6 +460,7 @@ namespace ago {
     if (!is_nn_ready)
       throw std::runtime_error("Neural Network(pytorch) is not ready!");
 
+    task_out << "start {}"_format(core_num) << endl;
     vector<thread> tasks;
     for (unsigned i = 0; i < core_num; i++)
       tasks.push_back(thread(&AGoTree::search, this));
@@ -512,9 +513,9 @@ namespace ago {
   AGoTree::AGoTree()
     : core_num(thread::hardware_concurrency()), c_puct(4.0f)
   {
+    core_num = 1;
     assert(ref_count==0);
     ++ref_count;
-    core_num = 1;
     init_nn();
     PUCT = [this] (Tree *node)
     {
