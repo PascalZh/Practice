@@ -40,17 +40,18 @@ namespace ago {
   using boost::lexical_cast;
   using std::cout; using std::cin; using std::endl;
   using std::string; using std::vector; using std::map; using std::array; using std::tuple;
-  using std::function; using std::for_each;
+  using std::make_tuple; using std::function; using std::for_each;
   using std::unique_ptr; using std::shared_ptr; using std::make_shared;
-  using std::make_unique; using std::thread; using std::mutex; using std::atomic;
+  using std::thread; using std::mutex; using std::atomic;
   using std::condition_variable; using std::unique_lock;
+  using std::numeric_limits; using std::runtime_error;
 
   class Action;
   struct Tree;
   struct Board;
   class MonteCarloTree;
 
-  enum class board_flag : char { none=0, black, white, eye_b, eye_w };
+  enum class board_flag : char { empty=0, black, white, eye_b, eye_w };
   board_flag &operator+=(board_flag &lhs, const int &rhs);
   board_flag &operator-=(board_flag &lhs, const int &rhs);
   using bf = board_flag;
@@ -80,9 +81,12 @@ namespace ago {
   //extern unique_ptr<vector<float>> py_list2array(PyObject *list);
 
   class Action {
-    // 0 ~ MAX_STONE_NUM - 1             : bA1 ~ bT19
+    // 0 ~ MAX_STONE_NUM - 1                 : bA1 ~ bT19
     // MAX_STONE_NUM ~ 2 * MAX_STONE_NUM - 1 : wA1 ~ wT19
-    // 2 * MAX_STONE_NUM                 : none
+    // 2 * MAX_STONE_NUM                     : bpass
+    // 2 * MAX_STONE_NUM + 1                 : wpass
+    // numeric_limits<code_t>J::max()        : root
+
     private:
       using code_t = uint16_t;
       code_t code;
@@ -90,14 +94,16 @@ namespace ago {
 
     public:
       static const string column_indices;
-      static const Action none; // Action is default to be none.
-      Action() : code(2 * MAX_STONE_NUM) {}
+      static const Action root; // Action is default to be root.
+      Action() : code(numeric_limits<code_t>::max()) {}
       Action(bf color, col_t col, row_t row);
       explicit Action(const string &action);
       operator string() const;
 
-      bf color() const;
+      bf color() const; // root's color is bf::empty
       tuple<col_t,row_t> coord() const;
+      inline bool is_pass() const {
+        return code == 2 * MAX_STONE_NUM || code == 2 * MAX_STONE_NUM + 1; }
       inline bool operator ==(const Action &rhs) const { return code == rhs.code; }
       inline bool operator !=(const Action &rhs) const { return code != rhs.code; }
   };
@@ -111,10 +117,10 @@ namespace ago {
 
     float w; unsigned n; // notation is consistent with the paper
     float p;
-    unique_ptr<float[]> dist;
+    unique_ptr<float[]> dist; // size: 1+19*19+1, first: value, last: probability of pass
     thread_local static unsigned seed;
 
-    Tree(const Action & a_ = Action::none)
+    Tree(const Action & a_ = Action::root)
       : a(a_), parent(nullptr), w(0.0f), n(0), p(0), dist{} {}
     ~Tree() {for_each(children.begin(), children.end(), [](Tree *node){delete node;});}
 
@@ -124,8 +130,11 @@ namespace ago {
     inline void clear_children();
 
     void add_dirichlet_noise(float epsilon, float alpha);
-    static bool check_valid(const Action &, Board &);
-    // check whether there exists an eye once action taken.
+
+    static bool is_game_end(Tree *cur_node);
+    static bool check_valid_move(const Action &action, Board &board);
+    static bool calc_score(const Board &board);
+
     static void move(Tree *, Tree *, Board &);
     static void undo_move(Tree *, Board &);
 
@@ -137,10 +146,10 @@ namespace ago {
   };
 
   struct Board {
-    static const tuple<col_t,row_t> no_stones;
+    static const tuple<col_t,row_t> no_stone;
 
     bf _board[19][19];
-    tuple<col_t, row_t> _cur_stone = no_stones;
+    tuple<col_t, row_t> _cur_stone = no_stone;
     Board();
 
     inline bf &operator [](const string & ind) { return (*this)[utils::str2coord(ind)]; }

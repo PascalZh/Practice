@@ -116,7 +116,7 @@ def get_lr(step):
     elif step > 600:
         return 10e-4
 
-def start_train():
+def train():
     batch_size = 32
 
     input_state = torch.randn(batch_size, 17, 19, 19)
@@ -203,23 +203,23 @@ def test_speed():
         ret = "task_data " + "323224134" + " " + " ".join(pv)
     eprint(time()-now)
 
-def main():
-    mcts_thread_alive = 0
-    task_to_do = 0
-    thread_ids = []
-    thread_num = 0
-    p_list = []
+mcts_thread_alive = 0
+task_to_do = 0
+thread_ids = []
+thread_num = 0
+p_list = []
+if __name__ == "__main__":
 
-    devices = ['cuda', 'cuda', 'cpu']
+    devices = ['cpu']
     for i in range(len(devices)):
         p = mp.Process(target=worker, args=(devices[i],))
         p_list.append(p)
         p.start()
 
     def dispatch_cmd(cmd):
-        nonlocal task_to_do
-        nonlocal thread_num
-        nonlocal mcts_thread_alive
+        global task_to_do
+        global thread_num
+        global mcts_thread_alive
         cmds = cmd.split()
         if cmds[0] == "put_task":
             thread_id = cmds[1]
@@ -241,9 +241,9 @@ def main():
             if mcts_thread_alive == 0:  # all mcts task thread exited
                 for i in range(thread_num):
                     task_q.put("EOF")
-                return "EOF"
                 for p in p_list:
                     p.join()
+                return "EOF"
             return ""
 
     while True:
@@ -256,7 +256,3 @@ def main():
             print(send)
             break
         print(send)
-
-
-if __name__ == "__main__":
-    main()

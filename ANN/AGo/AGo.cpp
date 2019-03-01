@@ -1,4 +1,3 @@
-#define NDEBUG
 #include "AGo.h"
 
 namespace ago {
@@ -37,23 +36,21 @@ namespace ago {
 
   // ************** class Action ************** {{{
 
-  const Action Action::none;
+  const Action Action::root;
   const string Action::column_indices = "ABCDEFGHJKLMNOPQRST";
-  
+
   Action::Action(const string &action)
   {
-    assert(action.size() >= 3);
-    assert(action[0] == 'b' || action[0] == 'w');
-
     if (action[0] == 'b') this->code = 0;
-    else this->code = MAX_STONE_NUM;
+    else if (action[0] == 'w') this->code = MAX_STONE_NUM;
+    else if (action == "bpass") { this->code = 2 * MAX_STONE_NUM; return;
+    } else if (action == "wpass") { this->code = 2 * MAX_STONE_NUM + 1;
+    } else { assert(false); }
 
-    col_t col; row_t row;
-    std::tie(col, row) = utils::str2coord(action.substr(1));
-    assert(col < 19 && row < 19);
+    col_t col; row_t row; std::tie(col, row) = utils::str2coord(action.substr(1));
     this->code += col * 19+ row;
   }
-  
+
   Action::Action(bf color, col_t col, row_t row)
   {
     assert(color == bf::black || color == bf::white);
@@ -67,46 +64,15 @@ namespace ago {
 
   // ************** class MonteCarloTree ************** {{{
 
-  /*
-     void MonteCarloTree::expand()
-     {
-     vector<Move> valid_moves;
-
-  // enumerate moves that are valid
-  bool is_next_step_black = _cur_node->a.color() == bf::black;
-  char a[5] = "xxxx";
-  for ( auto col : "ABCDEFGHJKLMNOPQRST" )
-  for ( auto row : {1,2,3,4,5,6,7,8,9,10,
-  11,12,13,14,15,16,17,18,19} ) {
-  a[0] = is_next_step_black ? 'b' : 'w';
-  a[1] = col;
-  if (row >= 10) {
-  a[2] = '1'; a[3] = row % 10 + 48; a[4] = 0;
-  } else { a[2]= row + 48; a[3] = 0; }
-
-  Action tmp(a);
-  //if (Tree::check_valid(tmp, _cur_board)) {
-  //valid_moves.push_back();
-  //}
-  }
-
-  _pruner(valid_moves, _cur_board);
-
-  for ( auto &move : valid_moves ) {
-  //_cur_node -> make_child(std::move(move));
-  }
-  }
-  */
-
   MonteCarloTree::MonteCarloTree(Pruner pruner_ = nullptr)
     :_cur_node(new Tree), _pruner(pruner_)
   {
 
   }
-  
+
   MonteCarloTree::~MonteCarloTree ()
   {
-    while (_cur_node->a != Action::none)
+    while (_cur_node->a != Action::root)
       _cur_node = _cur_node->parent;
     delete _cur_node;
   }
@@ -146,25 +112,24 @@ namespace ago {
     }
   }
 
-  void Tree::push_back_child(const Action &a, Board &b)
+  bool Tree::check_valid_move(const Action &a, Board &b)
   {
-    auto &&m = action2move(a, b);
-    Tree * child = new Tree(std::get<0>(m), this, std::move(std::get<1>(m)));
-    children.push_back(child);
+    if (b[a.coord()] != bf::empty && !a.is_pass()) { return false; }
+    // TODO: other rules
   }
 
-  bool Tree::check_valid(const Action &a, Board &b)
+  bool Tree::calc_score(const Board &board)
   {
-    bool valid = true;
-    if (b[a.coord()] != bf::none) {
-      valid = false;
-    }
-    return valid;
+
   }
 
   Move Tree::action2move(const Action &a, Board &b)
   {
-    assert(check_valid(a, b));
+    assert(check_valid_move(a, b));
+
+    if (a.is_pass()) {
+      return make_tuple(a, Prisoners());
+    }
 
     vector<size_t> pris_coord;
     function<bool (int, int, const bf &)> check_Qi =
@@ -173,10 +138,10 @@ namespace ago {
 
         b[col][row] += 2;
         pris_coord.push_back(col*19+row);
-        if (col+1 < 19 && b[col+1][row] == bf::none ||
-            col-1 >= 0 && b[col-1][row] == bf::none ||
-            row+1 < 19 && b[col][row+1] == bf::none ||
-            row-1 >= 0 && b[col][row-1] == bf::none) {
+        if (col+1 < 19 && b[col+1][row] == bf::empty ||
+            col-1 >= 0 && b[col-1][row] == bf::empty ||
+            row+1 < 19 && b[col][row+1] == bf::empty ||
+            row-1 >= 0 && b[col][row-1] == bf::empty) {
           return true;
         }
         if (col+1 < 19 && b[col+1][row] == color
@@ -221,22 +186,26 @@ namespace ago {
         case 3: _row_++; break; case 4: _row_--; break;
       }
       if (_col_ >= 0 && _col_ < 19 && _row_ >= 0 && _row_ < 19 &&
-          b[_col_][_row_] != b[col][row] && b[_col_][_row_] != bf::none) {
+          b[_col_][_row_] != b[col][row] && b[_col_][_row_] != bf::empty) {
         restore_board(!check_Qi(_col_, _row_, b[_col_][_row_]));
       }
     }
 
-    b[coord] = bf::none;
-    return std::make_tuple(a, std::move(p));
+    b[coord] = bf::empty;
+    return make_tuple(a, std::move(p));
   }
 
   void Tree::move(Tree *cur_node, Tree *next_node, Board &b)
   {
     const Action &action = next_node->a;
     const auto &pos = action.coord();
-
-    assert(b[pos] == bf::none);
+    assert(b[pos] == bf::empty);
     assert(next_node->parent == cur_node);
+
+    if (action.is_pass()) {
+      b._cur_stone = Board::no_stone;
+      return;
+    }
 
     // update _cur_stone and _board
     b._cur_stone = pos;
@@ -247,24 +216,29 @@ namespace ago {
       const auto &coord = stone.coord();
       const auto &c = stone.color();
       assert(b[coord] == c && (c == bf::black || c == bf::white));
-      b[coord] = bf::none;
+      b[coord] = bf::empty;
     }
   }
 
   void Tree::undo_move(Tree * cur_node, Board &b)
   {
-    assert(cur_node->a != Action::none);
     const Action &action = cur_node->a;
+    assert(action != Action::root);
     const auto &pos = action.coord();
     assert(b[pos] == action.color());
+
     // update _cur_stone and _board
     const auto &parent = cur_node->parent;
-    if (parent->a == Action::none) {
-      b._cur_stone = Board::no_stones;
+    if (parent->a == Action::root) {
+      b._cur_stone = Board::no_stone;
     } else {
       b._cur_stone = cur_node->parent->a.coord();
     }
-    b[pos] = bf::none;
+
+    if (action.is_pass()) {
+      return;
+    }
+    b[pos] = bf::empty;
 
     // update _board with prisoners
     auto &pris = cur_node->prisoners;
@@ -272,7 +246,7 @@ namespace ago {
         [&b] (Stone &stone) {
         const auto &coord = stone.coord();
         const auto &c = stone.color();
-        assert(b[coord] == bf::none);
+        assert(b[coord] == bf::empty);
         b[coord] = c;
         });
   }
@@ -328,7 +302,7 @@ namespace ago {
         string s(19*19,' ');
         for (int i = 0; i < 19; i++) {
           for (int j = 0; j < 19; j++) {
-            if (node->a != Action::none) {
+            if (node->a != Action::root) {
               s[i*19+j] = char(int(b[i][j]) + int('0'));
             } else {
               s[i*19+j] = '0';
@@ -336,7 +310,7 @@ namespace ago {
           }
         }
         ret += ":" + std::move(s);
-        if (node->a != Action::none) {
+        if (node->a != Action::root) {
           Tree::undo_move(node, b);
           node = node->parent;
         }
@@ -357,7 +331,9 @@ namespace ago {
         }
         cur_node = *largest;
         Tree::move(cur_node->parent, cur_node, cur_board);
-        // call move to keep cur_node synchronized with cur_board ,
+      }
+      if (Tree::is_game_end(cur_node)) {
+        // TODO: when game ends, let cur_node be a special leaf node, and do not expand
       }
     };
 
@@ -391,18 +367,25 @@ namespace ago {
         assert(!pvs[task_id]);
       }
 
-      // build the tree with the data(pv)
+      // build nodes with the data(pv)
       const auto &color_to_play = utils::reverse_bf(cur_node->a.color());
       cur_node->w = pv[0]; // value
       cur_node->n += 1;
+
+      // build nodes with the probability of 19*19 moves
       for (int i = 1; i < 19*19+1; i++) {
         auto col = (i - 1) / 19; auto row = (i - 1) % 19; 
         Action a(color_to_play, col, row);
-        if (Tree::check_valid(a, cur_board)) {
+        if (Tree::check_valid_move(a, cur_board)) {
           cur_node->push_back_child(a, cur_board);
           cur_node->children.back()->p = pv[i];
         }
       }
+      // build a node of pass
+      string tmp_a = color_to_play == bf::black?"bpass":"wpass";
+      cur_node->push_back_child(Action(std::move(tmp_a)), cur_board);
+      cur_node->children.back()->p = pv[19*19+1];
+
       cur_node->add_dirichlet_noise();
 
       // 3. Backpropagation
@@ -434,8 +417,8 @@ namespace ago {
 
         unsigned long task_id;
         task_in >> task_id;
-        unique_ptr<float[]> pv(new float[19*19+1]);
-        for (int i = 0; i < 19*19+1; ++i) {
+        unique_ptr<float[]> pv(new float[19*19+1+1]);
+        for (int i = 0; i < 19*19+1+1; ++i) {
           task_in >> pv[i];
         }
         // lexical_cast will check the data, so
@@ -473,36 +456,47 @@ namespace ago {
     retrieve_task.join();
 
     // all tasks finished
-    int sum{}; unique_ptr<float[]> p(new float[19*19]{}); // p : move probability dist
+    int sum{}; unique_ptr<float[]> p(new float[19*19+1]{}); // p : move probability dist
     for (unsigned i = 0; i < core_num; i++) {
       for (auto &c : trees[i]->children) {
-        const auto &ind = c->a.coord();
-        p[std::get<0>(ind)*19+std::get<1>(ind)] += c->n;
+        if (c->a.is_pass()) {
+          p[19*19] += c->n;
+        } else {
+          const auto &ind = c->a.coord();
+          p[std::get<0>(ind)*19+std::get<1>(ind)] += c->n;
+        }
         sum += c->n;
       }
     }
     trees.clear();
-    for (int i = 0; i < 19*19; ++i) { p[i] /= sum; }
+    for (int i = 0; i < 19*19+1; ++i) { p[i] /= sum; }
 
     // choose one position to put on stone
     size_t ind;
     if (tau == std::numeric_limits<float>::infinity()) {
       float max = -1;
-      for (int i = 0; i < 19*19; i++) {
+      for (int i = 0; i < 19*19+1; i++) {
         if (p[i] > max) { max = p[i]; ind = i; }
       }
     } else {
       if ( tau != 1.0f )
-        for (int i = 0; i < 19*19; ++i) { p[i] = std::pow(p[i], 1 / tau); }
+        for (int i = 0; i < 19*19+1; ++i) { p[i] = std::pow(p[i], 1 / tau); }
       float *p_raw = p.release();
       std::random_device rd;
       std::mt19937 gen(rd());
-      std::discrete_distribution<> d(p_raw, p_raw+19*19);
+      std::discrete_distribution<> d(p_raw, p_raw+19*19+1);
       p.reset(p_raw);
       ind = d(gen);
     }
-    _cur_node->push_back_child(Action(utils::reverse_bf(_cur_node->a.color()),
-          ind/19, ind%19), _cur_board);
+
+    const auto &color_to_play = utils::reverse_bf(_cur_node->a.color());
+    if (ind == 19*19) { // choose pass
+      string tmp_a = color_to_play == bf::black?"bpass":"wpass";
+      _cur_node->push_back_child(Action(std::move(tmp_a)), _cur_board);
+    } else {
+      _cur_node->push_back_child(Action(color_to_play, ind/19, ind%19), _cur_board);
+    }
+
     assert(_cur_node->children.size() == 1);
     Tree::move(_cur_node, _cur_node->children[0], _cur_board);
     _cur_node = _cur_node->children[0];
@@ -513,7 +507,7 @@ namespace ago {
   AGoTree::AGoTree()
     : core_num(thread::hardware_concurrency()), c_puct(4.0f)
   {
-    core_num = 1;
+    core_num = core_num > 4 ? 4 : core_num;
     assert(ref_count==0);
     ++ref_count;
     init_nn();
@@ -536,11 +530,11 @@ namespace ago {
   // }}}
 
   // *************** struct Board *************** {{{
-  const tuple<col_t,row_t> Board::no_stones = std::make_tuple(19, 19);
+  const tuple<col_t,row_t> Board::no_stone = make_tuple(19, 19);
   Board::Board() {
     for (int i = 0; i < 19; i++)
       for (int j = 0; j < 19; j++)
-        _board[i][j] = bf::none;
+        _board[i][j] = bf::empty;
   }
   std::ostream &operator <<(std::ostream &out, Board &board)
   {
@@ -561,7 +555,7 @@ namespace ago {
 
       const auto &b = board._board;
       for (int i = 18; i >= 0; --i) {
-        assert(b[i][j] == bf::black || b[i][j] == bf::white || b[i][j] == bf::none);
+        assert(b[i][j] == bf::black || b[i][j] == bf::white || b[i][j] == bf::empty);
         if (b[i][j] == bf::black)
           line[2*i+1] = 'X';
         else if (b[i][j] == bf::white)
@@ -569,7 +563,7 @@ namespace ago {
       }
 
       // mark _cur_stone
-      if (j == int(cur_j) && board._cur_stone != Board::no_stones) {
+      if (j == int(cur_j) && board._cur_stone != Board::no_stone) {
         line[2*cur_i] = '('; line[2*cur_i+2] = ')';
       }
 

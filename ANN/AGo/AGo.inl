@@ -15,8 +15,8 @@ namespace ago {
 
     inline bf reverse_bf(const bf&c)
     {
-      assert(c == bf::white || c == bf::black || c == bf::none);
-      return c == bf::white || c == bf::none ? bf::black : bf::white;
+      assert(c == bf::white || c == bf::black || c == bf::empty);
+      return c == bf::white || c == bf::empty ? bf::black : bf::white;
     }
 
   }
@@ -34,6 +34,12 @@ namespace ago {
 
   inline Action::operator string() const
   {
+    if (code == 2 * MAX_STONE_NUM)
+      return string("bpass");
+    if (code == 2 * MAX_STONE_NUM)
+      return string("wpass");
+    if (code == numeric_limits<code_t>::max())
+      return string("root");
     col_t col; row_t row;
     std::tie(col, row) = coord();
     string ret = fmt::to_string(row + 1);
@@ -52,10 +58,19 @@ namespace ago {
 
   inline bf Action::color() const
   {
-    assert(code <= 2 * MAX_STONE_NUM);
     if (code < MAX_STONE_NUM) return bf::black;
     else if (code < 2 * MAX_STONE_NUM) return bf::white;
-    else if (code == 2 * MAX_STONE_NUM) return bf::none;
+    else if (code == 2 * MAX_STONE_NUM) return bf::black;
+    else if (code == 2 * MAX_STONE_NUM) return bf::white;
+    else if (code == numeric_limits<code_t>::max()) return bf::empty;
+    else assert(false && "Action::color()");
+  }
+
+  inline void Tree::push_back_child(const Action &a, Board &b)
+  {
+    auto &&m = action2move(a, b);
+    Tree * child = new Tree(std::get<0>(m), this, std::move(std::get<1>(m)));
+    children.push_back(child);
   }
 
   inline void Tree::erase_children(vector<Tree *>::iterator itr)
@@ -70,6 +85,14 @@ namespace ago {
       delete m;
     }
     children.clear();
+  }
+
+  inline bool Tree::is_game_end(Tree *cur_node)
+  {
+    if (cur_node->parent->a == Action::root) {
+      return false;
+    }
+    return cur_node->a.is_pass() && cur_node->parent->a.is_pass();
   }
 
   inline bf &Board::operator [](const tuple<col_t,row_t> &coord)
