@@ -13,6 +13,31 @@ namespace ago {
       return static_cast<unsigned>(seed);
     }
 
+    string get_game_state(Tree *node, Board b)
+    {
+#define bf2str(x) (x == bf::black?char(int(bf::black)+int('0')):\
+    char(int(bf::white)+int('0')))
+      string ret = " "; ret[0] = bf2str(reverse_bf(node->a.color()));
+      for (int k = 0; k < 8; k++) {
+        string s(19*19,' ');
+        for (int i = 0; i < 19; i++) {
+          for (int j = 0; j < 19; j++) {
+            if (node->a != Action::root) {
+              s[i*19+j] = char(int(b[i][j]) + int('0'));
+            } else {
+              s[i*19+j] = '0';
+            }
+          }
+        }
+        ret += ":" + std::move(s);
+        if (node->a != Action::root) {
+          Tree::undo_move(node, b);
+          node = node->parent;
+        }
+      }
+      return ret;
+#undef bf2str
+    }
     /*
        unique_ptr<vector<float>> py_list2array(PyObject *list)
        {
@@ -41,11 +66,14 @@ namespace ago {
 
   Action::Action(const string &action)
   {
+    if (action == "bpass") {
+      this->code = 2 * MAX_STONE_NUM; return;
+    } else if (action == "wpass") {
+      this->code = 2 * MAX_STONE_NUM + 1; return;
+    }
     if (action[0] == 'b') this->code = 0;
     else if (action[0] == 'w') this->code = MAX_STONE_NUM;
-    else if (action == "bpass") { this->code = 2 * MAX_STONE_NUM; return;
-    } else if (action == "wpass") { this->code = 2 * MAX_STONE_NUM + 1;
-    } else { assert(false); }
+    
 
     col_t col; row_t row; std::tie(col, row) = utils::str2coord(action.substr(1));
     this->code += col * 19+ row;
@@ -114,13 +142,113 @@ namespace ago {
 
   bool Tree::check_valid_move(const Action &a, Board &b)
   {
-    if (b[a.coord()] != bf::empty && !a.is_pass()) { return false; }
+    if (!a.is_pass() && b[a.coord()] != bf::empty) { return false; }
     // TODO: other rules
+    return true;
   }
 
-  bool Tree::calc_score(const Board &board)
+  tuple<int,int> Tree::calc_score(Board &board)
   {
+#define TEST_PRINT \
+    for (int m = 18; m >= 0; m--) {\
+      for (int n = 0; n < 19; n++) {\
+        if (b[n][m] == searched) cout << '+';\
+        else if (b[n][m] == marker) cout << '*';\
+        else cout << b[n][m];\
+        cout << ' ';\
+      }\
+      cout << endl;\
+    }\
+    cout << endl;
+    float white_score{}; float black_score{};
+    int b[19][19];
+    for (int i = 0; i < 19; i++) {
+      for (int j = 0; j < 19; j++) {
+        b[i][j] = int(board[i][j]);
+        if (board[i][j] == bf::white) {
+          ++white_score;
+        }
+        if (board[i][j] == bf::black) {
+          ++black_score;
+        }
+      }
+    }
 
+    const int &searched = 8888;
+    const int &marker = 8848;
+    function<int (int, int)> mark_dipan =
+      [&b, &mark_dipan, &searched, &marker] (int col, int row) -> int
+      { // 返回值用来标记是白子或者黑子的底盘
+        if (b[col][row] == int(bf::white)) {
+          return int(bf::white);
+        }
+        if (b[col][row] == int(bf::black)) {
+          return int(bf::black);
+        }
+        b[col][row] = marker;
+        vector<int> ret;
+        if (col+1 < 19 && b[col+1][row] != searched &&
+            b[col+1][row] != marker) {
+          ret.push_back(mark_dipan(col+1, row));
+        }
+        if (col-1 >= 0 && b[col-1][row] != searched &&
+            b[col-1][row] != marker) {
+          ret.push_back(mark_dipan(col-1, row));
+        }
+        if (row+1 < 19 && b[col][row+1] != searched &&
+            b[col][row+1] != marker) {
+          ret.push_back(mark_dipan(col, row+1));
+        }
+        if (row-1 >= 0 && b[col][row-1] != searched &&
+            b[col][row-1] != marker) {
+          ret.push_back(mark_dipan(col, row-1));
+        }
+        auto begin = ret.begin();
+        auto end = std::remove_if(ret.begin(), ret.end(), [](int &x) { return x == 0; });
+        if (std::any_of(begin, end, [](int &x){ return x==-1; })) {
+          return -1;
+        } else if (begin == end) {
+          return 0; // 0 表示无法判断
+        } else if (std::all_of(begin, end, [&ret](int &x){ return ret[0] == x; })) {
+          return ret[0];
+        } else {
+          return -1; // -1用来表示这块地盘既不是白子的也不是黑子的
+        }
+      };
+    for (int i = 0; i < 19; i++) {
+      for (int j = 0; j < 19; j++) {
+        if (b[i][j] == int(bf::empty)) {
+          int res = mark_dipan(i, j);
+          if (res == -1) {
+            for (int i_ = 0; i_ < 19; i_++) {
+              for (int j_ = 0; j_ < 19; j_++) {
+                if (b[i_][j_] == marker) {
+                  b[i_][j_] = searched;
+                }
+              }
+            }
+          } else {
+            for (int i_ = 0; i_ < 19; i_++) {
+              for (int j_ = 0; j_ < 19; j_++) {
+                if (b[i_][j_] == marker) {
+                  b[i_][j_] = searched;
+                  if (res == int(bf::white)) {
+                    ++white_score;
+                  }
+                  if (res == int(bf::black)) {
+                    ++black_score;
+                  }
+                }
+              }
+            }
+          }
+          //TEST_PRINT;
+          //cout << black_score << endl;
+          //cout << white_score << endl;
+        }
+      }
+    }
+    return make_tuple(black_score, white_score);
   }
 
   Move Tree::action2move(const Action &a, Board &b)
@@ -293,33 +421,9 @@ namespace ago {
       task_out << "start_thread {}"_format(id) << endl;
     }
 
-    auto get_game_state = [] (Tree *node, Board b)
-    {
-#define bf2str(x) (x == bf::black?char(int(bf::black)+int('0')):\
-    char(int(bf::white)+int('0')))
-      string ret = " "; ret[0] = bf2str(utils::reverse_bf(node->a.color()));
-      for (int k = 0; k < 8; k++) {
-        string s(19*19,' ');
-        for (int i = 0; i < 19; i++) {
-          for (int j = 0; j < 19; j++) {
-            if (node->a != Action::root) {
-              s[i*19+j] = char(int(b[i][j]) + int('0'));
-            } else {
-              s[i*19+j] = '0';
-            }
-          }
-        }
-        ret += ":" + std::move(s);
-        if (node->a != Action::root) {
-          Tree::undo_move(node, b);
-          node = node->parent;
-        }
-      }
-      return ret;
-#undef bf2str
-    };
+    // {{{subfunction
     auto select = [this, &cur_node, &cur_board, &root] ()
-    {
+    { // return 1 if black win, return 2 if white win, return 0 if not over
       cur_node = root; cur_board = _cur_board;
       while(!cur_node->is_leaf()) {
         auto first = cur_node->children.begin();
@@ -332,42 +436,16 @@ namespace ago {
         cur_node = *largest;
         Tree::move(cur_node->parent, cur_node, cur_board);
       }
+
       if (Tree::is_game_end(cur_node)) {
-        // TODO: when game ends, let cur_node be a special leaf node, and do not expand
-      }
+        // when game ends, let cur_node be a special leaf node, and do not expand
+        float b; float w;
+        std::tie(b, w) = Tree::calc_score(cur_board);
+        return b > w?int(bf::black):(b < w?int(bf::white):0); // 0 for draw
+      } else { return -1; }
     };
 
-    for (int i = 0; i < 1600 / int(core_num); i++) {
-      // 1. Select
-      select();
-
-      // 2. Expand and Evaluate
-      // Get current state.
-      string game_state = get_game_state(cur_node, cur_board);
-
-      { // put task into queue
-        unique_lock<mutex> lck(mtx);
-        task_out << "put_task {} {}"_format(task_id, game_state) << endl;
-        cout << i << endl;
-      }
-
-      unique_ptr<float[]> pv;
-      // be aware of scope, this will be destroyed automatically
-      // get data from python
-      {
-        unique_lock<mutex> lck(mtx);
-
-        while (g_forbid_access_pvs[task_id])
-          cv.wait(lck); // this will unlock the mtx
-        g_forbid_access_pvs[task_id] = true;
-
-        // save pv
-        pv = std::move(pvs[task_id]);
-        assert(pv);
-        assert(!pvs[task_id]);
-      }
-
-      // build nodes with the data(pv)
+    auto expand = [&cur_node, &cur_board, &root] (float pv[]) {
       const auto &color_to_play = utils::reverse_bf(cur_node->a.color());
       cur_node->w = pv[0]; // value
       cur_node->n += 1;
@@ -387,12 +465,75 @@ namespace ago {
       cur_node->children.back()->p = pv[19*19+1];
 
       cur_node->add_dirichlet_noise();
+    };
+
+    // }}}
+
+    for (int i = 0; i < 1600 / int(core_num); i++) {
+      unique_ptr<float[]> pv;
+      // 1. Select
+      int winner = select();
+
+      // 2. Expand and Evaluate
+      if (winner == -1) {
+        // Get current state.
+        string game_state = utils::get_game_state(cur_node, cur_board);
+
+        { // put task into queue
+          unique_lock<mutex> lck(mtx);
+          task_out << "put_task {} {}"_format(task_id, game_state) << endl;
+          cout << i << endl;
+        }
+
+        { // get data from python
+          unique_lock<mutex> lck(mtx);
+
+          while (g_forbid_access_pvs[task_id])
+            cv.wait(lck); // this will unlock the mtx
+          g_forbid_access_pvs[task_id] = true;
+
+          // save pv
+          pv = std::move(pvs[task_id]);
+          assert(pv); assert(!pvs[task_id]);
+        }
+        // expand
+        auto pv_raw = pv.release();
+        expand(pv_raw);
+        pv.reset(pv_raw);
+
+      } else { // the case that one wins
+        int c = int(cur_node->a.color());
+        if (winner == 0) {
+          cur_node->w = 0.5;
+        } else if (c == winner) {
+          cur_node->w = 1;
+        } else {
+          cur_node->w = 0;
+        }
+      }
 
       // 3. Backpropagation
-      const auto &cur_color = cur_node->a.color();
-      while (cur_node != root) {
+      float v{1.0f};
+      bf v_color; // v_color means the color of 'v'
+      if (winner == 0) {
+        while (cur_node != root) {
+          auto &p = cur_node->parent;
+          p->w += 0.5; p->n += 1;
+          cur_node = p;
+        }
+        continue;
+      } else if (winner == int(bf::black)) {
+        v_color = bf::black;
+      } else if (winner == int(bf::white)) {
+        v_color = bf::white;
+      } else if (winner == -1) {
+        v = pv[0];
+        v_color = cur_node->a.color();
+      }
+
+      while (cur_node != root) { // backup to cur_node's parents
         auto &p = cur_node->parent;
-        if(p->a.color() == cur_color) p->w += pv[0];
+        if(p->a.color() == v_color) p->w += v; else p->w -= v;
         p->n += 1;
         cur_node = p;
       }
@@ -421,8 +562,6 @@ namespace ago {
         for (int i = 0; i < 19*19+1+1; ++i) {
           task_in >> pv[i];
         }
-        // lexical_cast will check the data, so
-        // succeed in receiving data
 
         unique_lock<mutex> lck(mtx);
         pvs[task_id] = std::move(pv);
@@ -436,7 +575,7 @@ namespace ago {
     print(color+"Thread retrieve_pv exited normally\n"+reset);
   }
 
-  void AGoTree::start_search_loop()
+  void AGoTree::genmove()
   {
     assert(std::numeric_limits<float>::has_infinity);
     static float tau = 1.0f;
@@ -497,11 +636,45 @@ namespace ago {
       _cur_node->push_back_child(Action(color_to_play, ind/19, ind%19), _cur_board);
     }
 
-    assert(_cur_node->children.size() == 1);
     Tree::move(_cur_node, _cur_node->children[0], _cur_board);
-    _cur_node = _cur_node->children[0];
     _cur_node->dist = std::move(p);
+    _cur_node = _cur_node->children[0];
 
+  }
+
+  void AGoTree::start_selfplay()
+  {
+    while(!Tree::is_game_end(_cur_node)) {
+      genmove();
+    }
+    float b; float w; std::tie(b, w) = Tree::calc_score(_cur_board);
+    int winner;
+    if (b > w) winner = int(bf::black); // int(bf::black) = 1
+    if (b < w) winner = int(bf::white);
+    if (b == w) winner = 0;
+    // serializing the data
+    auto file = std::ofstream("data/tmp");
+    string s;
+    while (_cur_node->a != Action::root) {
+      auto &p = _cur_node->parent;
+      Tree::undo_move(_cur_node, _cur_board);
+      s = utils::get_game_state(p, _cur_board);
+      file << s << "-"; // data
+      // label
+      for (int i = 0; i < 19*19+1; ++i) {
+        file << p->dist[i] << ":";
+      }
+      if (winner == 0 || p->a == Action::root) {
+        file << "draw";
+      } else if (winner == int(p->a.color())) {
+        file << "win";
+      } else {
+        file << "lose";
+      }
+      file << endl;
+      _cur_node = p;
+    }
+    file.close();
   }
 
   AGoTree::AGoTree()

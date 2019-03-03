@@ -10,6 +10,7 @@
 #include <map>
 
 #include <iostream>
+#include <fstream>
 #include <string>
 
 #include <algorithm>
@@ -133,7 +134,7 @@ namespace ago {
 
     static bool is_game_end(Tree *cur_node);
     static bool check_valid_move(const Action &action, Board &board);
-    static bool calc_score(const Board &board);
+    static tuple<int,int> calc_score(Board &board);
 
     static void move(Tree *, Tree *, Board &);
     static void undo_move(Tree *, Board &);
@@ -174,7 +175,7 @@ namespace ago {
       void search() { select(); expand(); simulate(); back_propagation(); }
 
     public:
-      void start_search_loop();
+      void genmove();
       ~MonteCarloTree ();
 
     protected:
@@ -188,7 +189,8 @@ namespace ago {
     public:
       AGoTree();
       ~AGoTree();
-      void start_search_loop();
+      void genmove(); // TODO: the case that no space for genmove and the case that one win
+      void start_selfplay();
     private:
       function<float (Tree *)> PUCT;
       static int ref_count; // Only one object is allowed to exist at the same time

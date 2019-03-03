@@ -89,7 +89,7 @@ namespace ago {
 
   inline bool Tree::is_game_end(Tree *cur_node)
   {
-    if (cur_node->parent->a == Action::root) {
+    if (!cur_node->parent || cur_node->parent->a == Action::root) {
       return false;
     }
     return cur_node->a.is_pass() && cur_node->parent->a.is_pass();

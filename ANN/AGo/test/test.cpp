@@ -92,6 +92,29 @@ void testAction()
 
 }
 
+void testcalc_score()
+{
+  MARKTEST("testcalc_score");
+  Board b;
+  b[0][0] = bf::black;
+  b[1][2] = bf::black;
+  b[1][1] = bf::black;
+  b[0][3] = bf::black;
+  b[17][0] = bf::white;
+  b[17][1] = bf::white;
+  b[17][2] = bf::white;
+  b[17][3] = bf::white;
+  b[17][4] = bf::white;
+  b[16][0] = bf::black;
+  b[16][1] = bf::black;
+  b[16][2] = bf::black;
+  b[16][3] = bf::black;
+  b[16][4] = bf::black;
+  b[18][5] = bf::white;
+  b[17][5] = bf::black;
+  b[18][6] = bf::black;
+  Tree::calc_score(b);
+}
 /*
    void show_id(PyObject * pFunc)
    {
@@ -166,15 +189,16 @@ Py_Finalize();
 int main(int argc, char *argv[])
 {
   //testRandom();
-  testTree();
+  //testTree();
   //testAction();
-  //PRT_TST(sizeof(unsigned));
+  //testcalc_score();
+  //PRT_TST(sizeof(int));
   //PRT_TST(sizeof(int32_t));
   //PRT_TST(int(bf::none));
 
   TIMETEST;
   AGoTree t;
-  t.start_search_loop();
+  t.start_selfplay();
   cout << "test finish..." << endl;
 
   return 0;

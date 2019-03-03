@@ -163,12 +163,15 @@ def worker(device):
         thread_id, state = content
         state = torch.Tensor(state).unsqueeze(0).to(device)
         logit_p, v = model(state)
-        p = torch.sigmoid(logit_p).view(19*19+1)  # TODO pass probability
+        p = torch.sigmoid(logit_p).view(19*19+1)
+        # the last is pass probability
         pv = []
         pv.append(float(v[0][0]))
-        for i in range(19*19):
+        for i in range(19*19+1):
             pv.append(float(p[i]))
         pv = [str(e) for e in pv]
+        # eprint(len(pv))
+        # eprint(pv)
         recv_q.put("task_data " + thread_id + " " + " ".join(pv))
 
 

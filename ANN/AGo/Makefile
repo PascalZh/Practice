@@ -3,7 +3,7 @@ test_c := test/test.cpp AGo.cpp
 #LDFLAGS := $(shell python3.5-config --ldflags)
 #CFLAGS := $(shell python3.5-config --cflags)
 
-CFLAGS += -std=c++11
+CFLAGS += -std=c++14
 #-I$(shell echo $$BOOST_INCLUDE_PATH)
 LDFLAGS += -lfmt -lpthread -lboost_filesystem -lboost_system
 
