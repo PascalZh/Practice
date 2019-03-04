@@ -61,7 +61,7 @@ namespace ago {
     if (code < MAX_STONE_NUM) return bf::black;
     else if (code < 2 * MAX_STONE_NUM) return bf::white;
     else if (code == 2 * MAX_STONE_NUM) return bf::black;
-    else if (code == 2 * MAX_STONE_NUM) return bf::white;
+    else if (code == 2 * MAX_STONE_NUM + 1) return bf::white;
     else if (code == numeric_limits<code_t>::max()) return bf::empty;
     else assert(false && "Action::color()");
   }
@@ -87,11 +87,26 @@ namespace ago {
     children.clear();
   }
 
-  inline bool Tree::is_game_end(Tree *cur_node)
+  inline bool Tree::is_game_end(Tree *cur_node, Board &board)
   {
-    if (!cur_node->parent || cur_node->parent->a == Action::root) {
-      return false;
+    bool have_space = false;
+    for (int i = 0; i < 19; ++i) {
+      for (int j = 0; j < 19; ++j) {
+        have_space = have_space || board[i][j] == bf::empty;
+      }
     }
+    if (!have_space) { return true; }
+
+    int cnt_step = 0;
+    auto itr = cur_node;
+    while (itr->a != Action::root) {
+      cnt_step++;
+      itr = itr->parent;
+    }
+    if (cnt_step >= 300) { return true; }
+
+    if (!cur_node->parent || cur_node->parent->a == Action::root) { return false; }
+
     return cur_node->a.is_pass() && cur_node->parent->a.is_pass();
   }
 
@@ -106,12 +121,13 @@ namespace ago {
   inline void AGoTree::init_nn()
   {
     is_nn_ready = true;
-    p_c = new bp::child("./ago_nn.py", bp::std_in < task_out,
+    p_c = new bp::child("./ago_main.py", bp::std_in < task_out,
         bp::std_out > task_in);
   }
 
   inline void AGoTree::stop_nn()
   {
+    task_out << "stop" << endl;
     p_c->wait();
     auto exit_code = p_c->exit_code();
     delete p_c;

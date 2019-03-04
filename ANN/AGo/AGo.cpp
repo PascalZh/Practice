@@ -253,7 +253,11 @@ namespace ago {
 
   Move Tree::action2move(const Action &a, Board &b)
   {
-    assert(check_valid_move(a, b));
+    if (!check_valid_move(a, b)) {
+      cout << endl << "!!!!!!!!!!!!!!!!!!!!" << endl;
+      cout << string(a) << b;
+      assert(false);
+    }
 
     if (a.is_pass()) {
       return make_tuple(a, Prisoners());
@@ -303,7 +307,7 @@ namespace ago {
     b[coord] = color;
 
     // check whether there exist different stones
-    // in the directions: <>^V(left, right, up, down)
+    // in the directions: <>^V(left, right, up, down) TODO: check whether it becomes prisoner itself
     const auto &col = std::get<0>(coord);
     const auto &row = std::get<1>(coord);
 
@@ -325,58 +329,41 @@ namespace ago {
 
   void Tree::move(Tree *cur_node, Tree *next_node, Board &b)
   {
-    const Action &action = next_node->a;
-    const auto &pos = action.coord();
-    assert(b[pos] == bf::empty);
-    assert(next_node->parent == cur_node);
-
-    if (action.is_pass()) {
+    const Action &a = next_node->a;
+    if (a.is_pass()) {
       b._cur_stone = Board::no_stone;
       return;
     }
+    assert(b[a.coord()] == bf::empty);
+    assert(next_node->parent == cur_node);
 
-    // update _cur_stone and _board
-    b._cur_stone = pos;
-    b[pos] = action.color();
-    // update board with prisoners
-    auto &pris = next_node->prisoners;
-    for (auto &stone : pris) {
-      const auto &coord = stone.coord();
-      const auto &c = stone.color();
-      assert(b[coord] == c && (c == bf::black || c == bf::white));
-      b[coord] = bf::empty;
-    }
+
+    // update b
+    b._cur_stone = a.coord(); b[a.coord()] = a.color();
+    for (auto &stone : next_node->prisoners) { b[stone.coord()] = bf::empty; }
   }
 
   void Tree::undo_move(Tree * cur_node, Board &b)
   {
-    const Action &action = cur_node->a;
-    assert(action != Action::root);
-    const auto &pos = action.coord();
-    assert(b[pos] == action.color());
+    const Action &a = cur_node->a;
+    if (a.is_pass()) {
+      return;
+    }
+    assert(a != Action::root);
+    assert(b[a.coord()] == a.color());
 
     // update _cur_stone and _board
-    const auto &parent = cur_node->parent;
-    if (parent->a == Action::root) {
+    if (cur_node->parent->a == Action::root || cur_node->parent->a.is_pass()) {
       b._cur_stone = Board::no_stone;
     } else {
       b._cur_stone = cur_node->parent->a.coord();
     }
 
-    if (action.is_pass()) {
-      return;
-    }
-    b[pos] = bf::empty;
+    b[a.coord()] = bf::empty;
 
     // update _board with prisoners
-    auto &pris = cur_node->prisoners;
-    for_each(pris.begin(), pris.end(),
-        [&b] (Stone &stone) {
-        const auto &coord = stone.coord();
-        const auto &c = stone.color();
-        assert(b[coord] == bf::empty);
-        b[coord] = c;
-        });
+    for_each(cur_node->prisoners.begin(), cur_node->prisoners.end(),
+        [&b] (Stone &stone) { b[stone.coord()] = stone.color(); });
   }
 
   // }}}
@@ -403,11 +390,7 @@ namespace ago {
     root->parent = _cur_node->parent; root->a = _cur_node->a;
     root->prisoners = _cur_node->prisoners;
     // it fakes a node through copying _cur_code
-    Tree *cur_node;
-    Board cur_board;
-
-    const auto color = "\033[{}m"_format(g_code_color--);
-    const string reset = "\033[0m";
+    Tree *cur_node; Board cur_board;
 
     auto id = std::this_thread::get_id();
     const unsigned long task_id = lexical_cast<unsigned long>(id);
@@ -415,10 +398,7 @@ namespace ago {
 
     {
       unique_lock<mutex> lck(mtx);
-      print(color + "Thread {0} init! seed({1})\n"_format(id, Tree::seed)
-          + reset);
       g_forbid_access_pvs[task_id] = true;
-      task_out << "start_thread {}"_format(id) << endl;
     }
 
     // {{{subfunction
@@ -437,7 +417,7 @@ namespace ago {
         Tree::move(cur_node->parent, cur_node, cur_board);
       }
 
-      if (Tree::is_game_end(cur_node)) {
+      if (Tree::is_game_end(cur_node, cur_board)) {
         // when game ends, let cur_node be a special leaf node, and do not expand
         float b; float w;
         std::tie(b, w) = Tree::calc_score(cur_board);
@@ -469,7 +449,7 @@ namespace ago {
 
     // }}}
 
-    for (int i = 0; i < 1600 / int(core_num); i++) {
+    for (int i = 0; i < num_simulate / int(core_num); i++) {
       unique_ptr<float[]> pv;
       // 1. Select
       int winner = select();
@@ -482,7 +462,6 @@ namespace ago {
         { // put task into queue
           unique_lock<mutex> lck(mtx);
           task_out << "put_task {} {}"_format(task_id, game_state) << endl;
-          cout << i << endl;
         }
 
         { // get data from python
@@ -541,16 +520,11 @@ namespace ago {
 
     unique_lock<mutex> lck(mtx);
     trees.push_back(unique_ptr<Tree>(root));
-    task_out << "exit_thread {}"_format(id) << endl;
-    print(color+"Thread {} exited normally...\n"_format(id)+reset);
   }
 
   void AGoTree::retrieve_pv()
   {
-    const auto color = "\033[{}m"_format(g_code_color--);
-    const string reset = "\033[0m";
     string buf;
-    print(color+"Thread retrieve_pv init.\n"+reset);
     while (true) {
       // retrieve... and save in the pvs
       task_in >> buf;
@@ -567,17 +541,16 @@ namespace ago {
         pvs[task_id] = std::move(pv);
         g_forbid_access_pvs[task_id] = false;
         cv.notify_all();
-      } else if (buf == "EOF") {
-        print(color+"Thread retrieve_pv receive EOF from python\n"+reset);
+      } else if (buf == "genmove_finish") {
         break;
       }
     }
-    print(color+"Thread retrieve_pv exited normally\n"+reset);
   }
 
   void AGoTree::genmove()
   {
     assert(std::numeric_limits<float>::has_infinity);
+    assert(!Tree::is_game_end(_cur_node, _cur_board));
     static float tau = 1.0f;
     if (!is_nn_ready)
       throw std::runtime_error("Neural Network(pytorch) is not ready!");
@@ -591,6 +564,7 @@ namespace ago {
 
     for (auto &task : tasks)
       task.join();
+    task_out << "genmove_finish" << endl;
 
     retrieve_task.join();
 
@@ -608,10 +582,12 @@ namespace ago {
       }
     }
     trees.clear();
-    for (int i = 0; i < 19*19+1; ++i) { p[i] /= sum; }
+    if (sum != 0) for (int i = 0; i < 19*19+1; ++i) { p[i] /= sum; }
 
     // choose one position to put on stone
-    size_t ind;
+    size_t ind{999};
+    int discrete_dist[19*19+1];
+    for (int i = 0; i < 19*19+1; ++i) {discrete_dist[i] = p[i]*1000 + 1;}
     if (tau == std::numeric_limits<float>::infinity()) {
       float max = -1;
       for (int i = 0; i < 19*19+1; i++) {
@@ -619,32 +595,39 @@ namespace ago {
       }
     } else {
       if ( tau != 1.0f )
-        for (int i = 0; i < 19*19+1; ++i) { p[i] = std::pow(p[i], 1 / tau); }
-      float *p_raw = p.release();
-      std::random_device rd;
-      std::mt19937 gen(rd());
-      std::discrete_distribution<> d(p_raw, p_raw+19*19+1);
-      p.reset(p_raw);
-      ind = d(gen);
+        for (int i = 0; i < 19*19+1; ++i) {
+          discrete_dist[i] = std::pow(discrete_dist[i], 1 / tau);
+        }
     }
 
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::discrete_distribution<> d(discrete_dist, discrete_dist+19*19+1);
+    ind = ind != 999?ind:d(gen);
     const auto &color_to_play = utils::reverse_bf(_cur_node->a.color());
-    if (ind == 19*19) { // choose pass
-      string tmp_a = color_to_play == bf::black?"bpass":"wpass";
-      _cur_node->push_back_child(Action(std::move(tmp_a)), _cur_board);
-    } else {
-      _cur_node->push_back_child(Action(color_to_play, ind/19, ind%19), _cur_board);
-    }
+
+    Action action_to_gen;
+    do {
+      if (ind == 19*19) { // choose pass
+        string tmp_a = color_to_play == bf::black?"bpass":"wpass";
+        action_to_gen = Action(std::move(tmp_a));
+      } else {
+        action_to_gen = Action(color_to_play, ind/19, ind%19);
+      }
+    } while (!Tree::check_valid_move(action_to_gen, _cur_board) &&
+        ((ind = d(gen)) || true));
+    _cur_node->push_back_child(action_to_gen, _cur_board);
 
     Tree::move(_cur_node, _cur_node->children[0], _cur_board);
     _cur_node->dist = std::move(p);
     _cur_node = _cur_node->children[0];
+    cout << _cur_board;
 
   }
 
   void AGoTree::start_selfplay()
   {
-    while(!Tree::is_game_end(_cur_node)) {
+    while(!Tree::is_game_end(_cur_node, _cur_board)) {
       genmove();
     }
     float b; float w; std::tie(b, w) = Tree::calc_score(_cur_board);
@@ -653,13 +636,14 @@ namespace ago {
     if (b < w) winner = int(bf::white);
     if (b == w) winner = 0;
     // serializing the data
+    fs::create_directory("data");
     auto file = std::ofstream("data/tmp");
     string s;
     while (_cur_node->a != Action::root) {
       auto &p = _cur_node->parent;
       Tree::undo_move(_cur_node, _cur_board);
       s = utils::get_game_state(p, _cur_board);
-      file << s << "-"; // data
+      file << s << "="; // data
       // label
       for (int i = 0; i < 19*19+1; ++i) {
         file << p->dist[i] << ":";
@@ -675,12 +659,36 @@ namespace ago {
       _cur_node = p;
     }
     file.close();
+    fs::path p("data");
+    auto &f = filenames_sample;
+    for (auto &x : fs::directory_iterator(p)) {
+      if (!std::any_of(f.begin(), f.end(), [&x](auto &y) { return y == x; })
+          && std::regex_match("{}"_format(x.path()), pattern_sample))
+        f.push_back(x.path());
+    }
+    if (f.empty()) {
+      system("mv data/tmp data/net0000game00000");
+      f.push_back(fs::path("data/net0000game00000"));
+      cout << f.back() << endl;
+    } else {
+      std::sort(f.begin(), f.end());
+      string filename = "{}"_format(f.back());
+      std::smatch m;
+      std::regex_match(filename, m, pattern_sample);
+      filename = filename.substr(1, 16) + "{:0>5}"_format(lexical_cast<int>(m[2].str())+1);
+      system(("mv data/tmp " + filename).c_str());
+      f.push_back(fs::path(filename));
+      cout << f.back() << "has been created!" << endl;
+    }
   }
 
   AGoTree::AGoTree()
-    : core_num(thread::hardware_concurrency()), c_puct(4.0f)
+    : core_num(thread::hardware_concurrency()),
+    pattern_sample(".*data/net(\\d{4})game(\\d{5}).*"),
+    c_puct(4.0f), num_simulate(1600)
   {
     core_num = core_num > 4 ? 4 : core_num;
+    core_num = 1;
     assert(ref_count==0);
     ++ref_count;
     init_nn();
@@ -691,11 +699,16 @@ namespace ago {
       auto &p = node->parent;
       assert(std::accumulate(p->children.begin(), p->children.end(), 0,
             [] (int n, Tree *rhs) { return n + rhs->n; })
-          == int(p->n - 1));
+          == int(p->n - 1) || p->children.empty());
       int sum_n = p->n;
       float U = c_puct * node->p * std::sqrt(sum_n) / float(1 + node->n);
       return Q + U;
     };
+
+    cout << "Please input c_puct:";
+    cin >> c_puct;
+    cout << "Please input num_simulate:";
+    cin >> num_simulate;
   }
 
   AGoTree::~AGoTree() { stop_nn(); }

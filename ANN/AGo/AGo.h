@@ -12,6 +12,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <regex>
 
 #include <algorithm>
 #include <cassert>
@@ -31,6 +32,7 @@
 
 #include <boost/lexical_cast.hpp>
 #include <boost/process.hpp>
+#include <boost/filesystem.hpp>
 
 //#include <Python.h>
 
@@ -38,6 +40,7 @@ namespace ago {
 
   using namespace fmt::literals; using fmt::print;
   namespace bp = boost::process;
+  namespace fs = boost::filesystem;
   using boost::lexical_cast;
   using std::cout; using std::cin; using std::endl;
   using std::string; using std::vector; using std::map; using std::array; using std::tuple;
@@ -132,7 +135,7 @@ namespace ago {
 
     void add_dirichlet_noise(float epsilon, float alpha);
 
-    static bool is_game_end(Tree *cur_node);
+    static bool is_game_end(Tree *cur_node, Board &board);
     static bool check_valid_move(const Action &action, Board &board);
     static tuple<int,int> calc_score(Board &board);
 
@@ -189,7 +192,7 @@ namespace ago {
     public:
       AGoTree();
       ~AGoTree();
-      void genmove(); // TODO: the case that no space for genmove and the case that one win
+      void genmove();
       void start_selfplay();
     private:
       function<float (Tree *)> PUCT;
@@ -213,8 +216,13 @@ namespace ago {
       // buffer that store (p, v) result of nn.
       vector<unique_ptr<Tree>> trees;
 
-      // constant
+      // other
+      std::regex pattern_sample;
+      vector<fs::path> filenames_sample;
+
+      // hyperparameters
       float c_puct;
+      size_t num_simulate;
   };
 
 }
