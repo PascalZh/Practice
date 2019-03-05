@@ -36,7 +36,7 @@ namespace ago {
   {
     if (code == 2 * MAX_STONE_NUM)
       return string("bpass");
-    if (code == 2 * MAX_STONE_NUM)
+    if (code == 2 * MAX_STONE_NUM + 1)
       return string("wpass");
     if (code == numeric_limits<code_t>::max())
       return string("root");
@@ -90,20 +90,13 @@ namespace ago {
   inline bool Tree::is_game_end(Tree *cur_node, Board &board)
   {
     bool have_space = false;
+    auto &a = cur_node->a;
     for (int i = 0; i < 19; ++i) {
       for (int j = 0; j < 19; ++j) {
-        have_space = have_space || board[i][j] == bf::empty;
+        have_space = have_space || check_valid_move(Action(utils::reverse_bf(a.color()), i, j), board);
       }
     }
     if (!have_space) { return true; }
-
-    int cnt_step = 0;
-    auto itr = cur_node;
-    while (itr->a != Action::root) {
-      cnt_step++;
-      itr = itr->parent;
-    }
-    if (cnt_step >= 300) { return true; }
 
     if (!cur_node->parent || cur_node->parent->a == Action::root) { return false; }
 

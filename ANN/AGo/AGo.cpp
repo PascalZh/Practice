@@ -143,7 +143,36 @@ namespace ago {
   bool Tree::check_valid_move(const Action &a, Board &b)
   {
     if (!a.is_pass() && b[a.coord()] != bf::empty) { return false; }
-    // TODO: other rules
+    if (!a.is_pass()) {
+int i, j;
+std::tie(i, j) = a.coord();
+auto b_ = b;
+b_[i][j] = a.color();
+    function<bool (int, int, const bf &)> check_Qi =
+      [&b_, &check_Qi] (int col, int row, bf color) -> bool
+      { // 返回值表示这个位子的棋子是否有气
+
+        b_[col][row] += 2;
+        if (col+1 < 19 && b_[col+1][row] == bf::empty ||
+            col-1 >= 0 && b_[col-1][row] == bf::empty ||
+            row+1 < 19 && b_[col][row+1] == bf::empty ||
+            row-1 >= 0 && b_[col][row-1] == bf::empty) {
+          return true;
+        }
+        if (col+1 < 19 && b_[col+1][row] == color
+            && check_Qi(col+1, row, color) ||
+            col-1 >= 0 && b_[col-1][row] == color
+            && check_Qi(col-1, row, color) ||
+            row+1 < 19 && b_[col][row+1] == color
+            && check_Qi(col, row+1, color) ||
+            row-1 >= 0 && b_[col][row-1] == color
+            && check_Qi(col, row-1, color)) {
+          return true;
+        }
+        return false;
+      };
+	return check_Qi(i, j, a.color());
+}
     return true;
   }
 
@@ -307,7 +336,7 @@ namespace ago {
     b[coord] = color;
 
     // check whether there exist different stones
-    // in the directions: <>^V(left, right, up, down) TODO: check whether it becomes prisoner itself
+    // in the directions: <>^V(left, right, up, down)
     const auto &col = std::get<0>(coord);
     const auto &row = std::get<1>(coord);
 
@@ -655,36 +684,39 @@ namespace ago {
       } else {
         file << "lose";
       }
-      file << endl;
+      file << "=" << string(p->a) << endl;
       _cur_node = p;
     }
     file.close();
-    fs::path p("data");
+    fs::path p("./");
     auto &f = filenames_sample;
     for (auto &x : fs::directory_iterator(p)) {
-      if (!std::any_of(f.begin(), f.end(), [&x](auto &y) { return y == x; })
+      if (!std::any_of(f.begin(), f.end(), [&x](fs::path &y) { return y == x; })
           && std::regex_match("{}"_format(x.path()), pattern_sample))
         f.push_back(x.path());
     }
     if (f.empty()) {
-      system("mv data/tmp data/net0000game00000");
-      f.push_back(fs::path("data/net0000game00000"));
+      system("mv ./tmp ./net0000game00000");
+      f.push_back(fs::path("./net0000game00000"));
       cout << f.back() << endl;
     } else {
       std::sort(f.begin(), f.end());
       string filename = "{}"_format(f.back());
       std::smatch m;
       std::regex_match(filename, m, pattern_sample);
-      filename = filename.substr(1, 16) + "{:0>5}"_format(lexical_cast<int>(m[2].str())+1);
-      system(("mv data/tmp " + filename).c_str());
+      filename = filename.substr(1, 12) + "{:0>5}"_format(lexical_cast<int>(m[2].str())+1);
+      system(("mv ./tmp " + filename).c_str());
       f.push_back(fs::path(filename));
       cout << f.back() << "has been created!" << endl;
     }
+    while (_cur_node->a != Action::root)
+      _cur_node = _cur_node->parent;
+    _cur_node->clear_children();
   }
 
   AGoTree::AGoTree()
     : core_num(thread::hardware_concurrency()),
-    pattern_sample(".*data/net(\\d{4})game(\\d{5}).*"),
+    pattern_sample(".*net(\\d{4})game(\\d{5}).*"),
     c_puct(4.0f), num_simulate(1600)
   {
     core_num = core_num > 4 ? 4 : core_num;
@@ -711,7 +743,7 @@ namespace ago {
     cin >> num_simulate;
   }
 
-  AGoTree::~AGoTree() { stop_nn(); }
+  AGoTree::~AGoTree() { stop_nn(); --ref_count; }
 
   // }}}
 
