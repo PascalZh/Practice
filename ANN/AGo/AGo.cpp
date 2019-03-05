@@ -664,9 +664,24 @@ b_[i][j] = a.color();
     if (b > w) winner = int(bf::black); // int(bf::black) = 1
     if (b < w) winner = int(bf::white);
     if (b == w) winner = 0;
+
     // serializing the data
-    fs::create_directory("data");
-    auto file = std::ofstream("data/tmp");
+    auto &f = filenames;
+    for (auto &&x : fs::directory_iterator(data_path)) {
+      if (!std::any_of(f.begin(), f.end(), [&x](fs::path &y) { return y == x; })
+          && std::regex_match("{}"_format(x.path().filename()), pattern))
+        f.push_back(x.path());
+    }
+    if (f.empty()) {
+      f.push_back(fs::path(data_path + "/net0000game00000"));
+    } else {
+      std::sort(f.begin(), f.end());
+      string fn = "{}"_format(f.back().filename());
+      std::smatch m; std::regex_match(fn, m, pattern);
+      fn = fn.substr(14, 12) + "{:0>5}"_format(lexical_cast<int>(m[2].str())+1);
+      f.push_back(fs::path(fn));
+    }
+    auto file = std::ofstream("{}"_format(f.back().filename()));
     string s;
     while (_cur_node->a != Action::root) {
       auto &p = _cur_node->parent;
@@ -678,37 +693,16 @@ b_[i][j] = a.color();
         file << p->dist[i] << ":";
       }
       if (winner == 0 || p->a == Action::root) {
-        file << "draw";
+        file << "d";
       } else if (winner == int(p->a.color())) {
-        file << "win";
+        file << "w ";
       } else {
-        file << "lose";
+        file << "l";
       }
       file << "=" << string(p->a) << endl;
       _cur_node = p;
     }
     file.close();
-    fs::path p("./");
-    auto &f = filenames_sample;
-    for (auto &x : fs::directory_iterator(p)) {
-      if (!std::any_of(f.begin(), f.end(), [&x](fs::path &y) { return y == x; })
-          && std::regex_match("{}"_format(x.path()), pattern_sample))
-        f.push_back(x.path());
-    }
-    if (f.empty()) {
-      system("mv ./tmp ./net0000game00000");
-      f.push_back(fs::path("./net0000game00000"));
-      cout << f.back() << endl;
-    } else {
-      std::sort(f.begin(), f.end());
-      string filename = "{}"_format(f.back());
-      std::smatch m;
-      std::regex_match(filename, m, pattern_sample);
-      filename = filename.substr(1, 12) + "{:0>5}"_format(lexical_cast<int>(m[2].str())+1);
-      system(("mv ./tmp " + filename).c_str());
-      f.push_back(fs::path(filename));
-      cout << f.back() << "has been created!" << endl;
-    }
     while (_cur_node->a != Action::root)
       _cur_node = _cur_node->parent;
     _cur_node->clear_children();
@@ -716,7 +710,7 @@ b_[i][j] = a.color();
 
   AGoTree::AGoTree()
     : core_num(thread::hardware_concurrency()),
-    pattern_sample(".*net(\\d{4})game(\\d{5}).*"),
+    pattern(".*net(\\d{4})game(\\d{5}).*"),
     c_puct(4.0f), num_simulate(1600)
   {
     core_num = core_num > 4 ? 4 : core_num;
@@ -737,61 +731,82 @@ b_[i][j] = a.color();
       return Q + U;
     };
 
+
+    fs::path data("./data");
+    if (!fs::exists(data))
+      fs::create_directory(data);
+    vector<fs::path> paths;
+    for (auto &&x : fs::directory_iterator(data)) {
+      if (fs::is_directory(x.path()))
+        paths.push_back(x.path());
+    }
+
+    if (paths.empty()) {
+      paths.push_back(fs::path("data/batch000"));
+    } else {
+      std::sort(paths.begin(), paths.end());
+      string fn = "{}"_format(paths.back().filename());
+      std::smatch m; std::regex_match(fn, m, std::regex("data/batch(\\d{3})"));
+      fn = fn.substr(5, 5) + "{:0>3}"_format(lexical_cast<int>(m[1].str())+1);
+      paths.push_back(fs::path(fn));
+    }
+    fs::create_directory(paths.back());
+
     cout << "Please input c_puct:";
     cin >> c_puct;
     cout << "Please input num_simulate:";
     cin >> num_simulate;
   }
 
-  AGoTree::~AGoTree() { stop_nn(); --ref_count; }
+AGoTree::~AGoTree() { stop_nn(); --ref_count; }
 
-  // }}}
+// }}}
 
-  // *************** struct Board *************** {{{
-  const tuple<col_t,row_t> Board::no_stone = make_tuple(19, 19);
-  Board::Board() {
-    for (int i = 0; i < 19; i++)
-      for (int j = 0; j < 19; j++)
-        _board[i][j] = bf::empty;
-  }
-  std::ostream &operator <<(std::ostream &out, Board &board)
-  {
-    constexpr auto ban = "   a b c d e f g h j k l m n o p q r s t";
+// *************** struct Board *************** {{{
+const tuple<col_t,row_t> Board::no_stone = make_tuple(19, 19);
+Board::Board() {
+  for (int i = 0; i < 19; i++)
+    for (int j = 0; j < 19; j++)
+      _board[i][j] = bf::empty;
+}
+std::ostream &operator <<(std::ostream &out, Board &board)
+{
+  constexpr auto ban = "   a b c d e f g h j k l m n o p q r s t";
 
-    col_t cur_i; col_t cur_j;
-    std::tie(cur_i, cur_j) = board._cur_stone;
+  col_t cur_i; col_t cur_j;
+  std::tie(cur_i, cur_j) = board._cur_stone;
 
-    cout << ban << endl;
-    for (int j = 18; j >= 0; --j) {
-      string line = " . . . . . . . . . . . . . . . . . . . ";
+  cout << ban << endl;
+  for (int j = 18; j >= 0; --j) {
+    string line = " . . . . . . . . . . . . . . . . . . . ";
 
-      if (j == 3 || j == 9 || j == 15) {
-        line[2*3+1] = '+';
-        line[2*9+1] = '+';
-        line[2*15+1] = '+';
-      }
-
-      const auto &b = board._board;
-      for (int i = 18; i >= 0; --i) {
-        assert(b[i][j] == bf::black || b[i][j] == bf::white || b[i][j] == bf::empty);
-        if (b[i][j] == bf::black)
-          line[2*i+1] = 'X';
-        else if (b[i][j] == bf::white)
-          line[2*i+1] = 'O';
-      }
-
-      // mark _cur_stone
-      if (j == int(cur_j) && board._cur_stone != Board::no_stone) {
-        line[2*cur_i] = '('; line[2*cur_i+2] = ')';
-      }
-
-      auto row_num = "{:>2}"_format(j+1);
-      line = row_num + line + row_num;
-      cout << line << endl;
+    if (j == 3 || j == 9 || j == 15) {
+      line[2*3+1] = '+';
+      line[2*9+1] = '+';
+      line[2*15+1] = '+';
     }
-    cout << ban << endl;
-    return out;
+
+    const auto &b = board._board;
+    for (int i = 18; i >= 0; --i) {
+      assert(b[i][j] == bf::black || b[i][j] == bf::white || b[i][j] == bf::empty);
+      if (b[i][j] == bf::black)
+        line[2*i+1] = 'X';
+      else if (b[i][j] == bf::white)
+        line[2*i+1] = 'O';
+    }
+
+    // mark _cur_stone
+    if (j == int(cur_j) && board._cur_stone != Board::no_stone) {
+      line[2*cur_i] = '('; line[2*cur_i+2] = ')';
+    }
+
+    auto row_num = "{:>2}"_format(j+1);
+    line = row_num + line + row_num;
+    cout << line << endl;
   }
-  // }}}
+  cout << ban << endl;
+  return out;
+}
+// }}}
 
 }

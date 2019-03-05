@@ -197,14 +197,14 @@ int main(int argc, char *argv[])
   //PRT_TST(int(bf::none));
 
   TIMETEST;
-int i;
-cout << "Input how many games you want to play" << endl;
-cin >> i;
+  int i;
+  cout << "Input how many games you want to play" << endl;
+  cin >> i;
   AGoTree t;
   while(i--) {
 
-  t.start_selfplay();
-}
+    t.start_selfplay();
+  }
   cout << "test finish..." << endl;
 
   return 0;

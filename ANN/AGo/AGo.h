@@ -217,8 +217,9 @@ namespace ago {
       vector<unique_ptr<Tree>> trees;
 
       // other
-      std::regex pattern_sample;
-      vector<fs::path> filenames_sample;
+      std::regex pattern;
+      vector<fs::path> filenames;
+      string data_path;
 
       // hyperparameters
       float c_puct;

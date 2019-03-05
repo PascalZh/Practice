@@ -72,7 +72,7 @@ if __name__ == "__main__":
     thds = []
     task_q = mp.Queue()
     recv_q = mp.Queue()
-    devices = ['cuda']
+    devices = ['cpu']
     for i in range(len(devices)):
         thd = mp.Process(target=worker, args=(devices[i], task_q, recv_q))
         thds.append(thd)
