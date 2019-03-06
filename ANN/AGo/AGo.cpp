@@ -666,23 +666,9 @@ b_[i][j] = a.color();
     if (b == w) winner = 0;
 
     // serializing the data
-    auto &f = filenames;
-    for (auto &&x : fs::directory_iterator(data_path)) {
-      if (!std::any_of(f.begin(), f.end(), [&x](fs::path &y) { return y == x; })
-          && std::regex_match("{}"_format(x.path().filename()), pattern))
-        f.push_back(x.path());
-    }
-    if (f.empty()) {
-      f.push_back(fs::path(data_path + "/net0000game00000"));
-    } else {
-      std::sort(f.begin(), f.end());
-      string fn = "{}"_format(f.back().filename());
-      std::smatch m; std::regex_match(fn, m, pattern);
-      fn = fn.substr(14, 12) + "{:0>5}"_format(lexical_cast<int>(m[2].str())+1);
-      f.push_back(fs::path(fn));
-    }
-    auto file = std::ofstream("{}"_format(f.back().filename()));
-    string s;
+    static unsigned name_cnt = 0;
+    static string filename = "data/" + std::this_thread::get_id() + "/game";
+    auto file = std::ofstream(filename + "{:0>5}"_format(name_cnt--));
     while (_cur_node->a != Action::root) {
       auto &p = _cur_node->parent;
       Tree::undo_move(_cur_node, _cur_board);
@@ -710,7 +696,6 @@ b_[i][j] = a.color();
 
   AGoTree::AGoTree()
     : core_num(thread::hardware_concurrency()),
-    pattern(".*net(\\d{4})game(\\d{5}).*"),
     c_puct(4.0f), num_simulate(1600)
   {
     core_num = core_num > 4 ? 4 : core_num;
@@ -730,27 +715,6 @@ b_[i][j] = a.color();
       float U = c_puct * node->p * std::sqrt(sum_n) / float(1 + node->n);
       return Q + U;
     };
-
-
-    fs::path data("./data");
-    if (!fs::exists(data))
-      fs::create_directory(data);
-    vector<fs::path> paths;
-    for (auto &&x : fs::directory_iterator(data)) {
-      if (fs::is_directory(x.path()))
-        paths.push_back(x.path());
-    }
-
-    if (paths.empty()) {
-      paths.push_back(fs::path("data/batch000"));
-    } else {
-      std::sort(paths.begin(), paths.end());
-      string fn = "{}"_format(paths.back().filename());
-      std::smatch m; std::regex_match(fn, m, std::regex("data/batch(\\d{3})"));
-      fn = fn.substr(5, 5) + "{:0>3}"_format(lexical_cast<int>(m[1].str())+1);
-      paths.push_back(fs::path(fn));
-    }
-    fs::create_directory(paths.back());
 
     cout << "Please input c_puct:";
     cin >> c_puct;
