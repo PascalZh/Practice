@@ -38,24 +38,6 @@ namespace ago {
       return ret;
 #undef bf2str
     }
-    /*
-       unique_ptr<vector<float>> py_list2array(PyObject *list)
-       {
-       auto ret = std::make_unique<vector<float>>();
-       PyObject *iter = PyObject_GetIter(list);
-
-       if (!iter)
-       cout << "iter error!" << endl;
-
-       while (true) {
-       PyObject *next = PyIter_Next(iter);
-       if (!next) break;
-       ret->push_back(PyFloat_AsDouble(next));
-       cout << ret->back() << endl;
-       } 
-       return ret;
-       }
-       */
   }
   // }}}
 
@@ -73,7 +55,7 @@ namespace ago {
     }
     if (action[0] == 'b') this->code = 0;
     else if (action[0] == 'w') this->code = MAX_STONE_NUM;
-    
+
 
     col_t col; row_t row; std::tie(col, row) = utils::str2coord(action.substr(1));
     this->code += col * 19+ row;
@@ -144,35 +126,35 @@ namespace ago {
   {
     if (!a.is_pass() && b[a.coord()] != bf::empty) { return false; }
     if (!a.is_pass()) {
-int i, j;
-std::tie(i, j) = a.coord();
-auto b_ = b;
-b_[i][j] = a.color();
-    function<bool (int, int, const bf &)> check_Qi =
-      [&b_, &check_Qi] (int col, int row, bf color) -> bool
-      { // 返回值表示这个位子的棋子是否有气
+      int i, j;
+      std::tie(i, j) = a.coord();
+      auto b_ = b;
+      b_[i][j] = a.color();
+      function<bool (int, int, const bf &)> check_Qi =
+        [&b_, &check_Qi] (int col, int row, bf color) -> bool
+        { // 返回值表示这个位子的棋子是否有气
 
-        b_[col][row] += 2;
-        if (col+1 < 19 && b_[col+1][row] == bf::empty ||
-            col-1 >= 0 && b_[col-1][row] == bf::empty ||
-            row+1 < 19 && b_[col][row+1] == bf::empty ||
-            row-1 >= 0 && b_[col][row-1] == bf::empty) {
-          return true;
-        }
-        if (col+1 < 19 && b_[col+1][row] == color
-            && check_Qi(col+1, row, color) ||
-            col-1 >= 0 && b_[col-1][row] == color
-            && check_Qi(col-1, row, color) ||
-            row+1 < 19 && b_[col][row+1] == color
-            && check_Qi(col, row+1, color) ||
-            row-1 >= 0 && b_[col][row-1] == color
-            && check_Qi(col, row-1, color)) {
-          return true;
-        }
-        return false;
-      };
-	return check_Qi(i, j, a.color());
-}
+          b_[col][row] += 2;
+          if (col+1 < 19 && b_[col+1][row] == bf::empty ||
+              col-1 >= 0 && b_[col-1][row] == bf::empty ||
+              row+1 < 19 && b_[col][row+1] == bf::empty ||
+              row-1 >= 0 && b_[col][row-1] == bf::empty) {
+            return true;
+          }
+          if (col+1 < 19 && b_[col+1][row] == color
+              && check_Qi(col+1, row, color) ||
+              col-1 >= 0 && b_[col-1][row] == color
+              && check_Qi(col-1, row, color) ||
+              row+1 < 19 && b_[col][row+1] == color
+              && check_Qi(col, row+1, color) ||
+              row-1 >= 0 && b_[col][row-1] == color
+              && check_Qi(col, row-1, color)) {
+            return true;
+          }
+          return false;
+        };
+      return check_Qi(i, j, a.color());
+    }
     return true;
   }
 
@@ -402,17 +384,9 @@ b_[i][j] = a.color();
   // initialize static members
   int AGoTree::ref_count = 0;
 
-  // globals for thread
-  mutex mtx;
-  condition_variable cv;
-  std::map<unsigned long, bool> g_forbid_access_pvs;
-  // once retrieve_pv has retrieved data, it give every search thread
-  // a chance to find whether the data is its own data.
-  atomic<size_t> g_code_color(36); // print with different color in threads
-
-  void AGoTree::search()
+  Tree * AGoTree::search()
   {
-    // Init something
+    // Initialize...
     assert(_cur_node->children.empty());
     // create a tree for every thread
     auto root = new Tree;
@@ -421,16 +395,7 @@ b_[i][j] = a.color();
     // it fakes a node through copying _cur_code
     Tree *cur_node; Board cur_board;
 
-    auto id = std::this_thread::get_id();
-    const unsigned long task_id = lexical_cast<unsigned long>(id);
-    // task_id is the same with thread id
-
-    {
-      unique_lock<mutex> lck(mtx);
-      g_forbid_access_pvs[task_id] = true;
-    }
-
-    // {{{subfunction
+    // {{{ subfunction
     auto select = [this, &cur_node, &cur_board, &root] ()
     { // return 1 if black win, return 2 if white win, return 0 if not over
       cur_node = root; cur_board = _cur_board;
@@ -478,52 +443,43 @@ b_[i][j] = a.color();
 
     // }}}
 
-    for (int i = 0; i < num_simulate / int(core_num); i++) {
-      unique_ptr<float[]> pv;
+    for (int i = 0; i < num_simulate ; i++) {
+      static float pv[19*19+1+1];
       // 1. Select
       int winner = select();
-
       // 2. Expand and Evaluate
-      if (winner == -1) {
-        // Get current state.
+      if (winner == -1) { // game is not over, continue evaluating
         string game_state = utils::get_game_state(cur_node, cur_board);
 
-        { // put task into queue
-          unique_lock<mutex> lck(mtx);
-          task_out << "put_task {} {}"_format(task_id, game_state) << endl;
+        if ( i != num_simulate - 1 )
+          task_out << "send {}"_format(game_state) << endl;
+        else
+          task_out << "finish" << endl;
+
+        string buf;
+        task_in >> buf;
+        if (buf == "receive") {
+          for (int i = 0; i < 19*19+1+1; ++i) {
+            task_in >> pv[i];
+          }
+        } else if (buf == "finish") {
+          break;
         }
-
-        { // get data from python
-          unique_lock<mutex> lck(mtx);
-
-          while (g_forbid_access_pvs[task_id])
-            cv.wait(lck); // this will unlock the mtx
-          g_forbid_access_pvs[task_id] = true;
-
-          // save pv
-          pv = std::move(pvs[task_id]);
-          assert(pv); assert(!pvs[task_id]);
-        }
-        // expand
-        auto pv_raw = pv.release();
-        expand(pv_raw);
-        pv.reset(pv_raw);
-
+        expand(pv);
       } else { // the case that one wins
         int c = int(cur_node->a.color());
-        if (winner == 0) {
+        if (winner == 0)
           cur_node->w = 0.5;
-        } else if (c == winner) {
+        else if (c == winner)
           cur_node->w = 1;
-        } else {
+        else
           cur_node->w = 0;
-        }
       }
 
       // 3. Backpropagation
-      float v{1.0f};
+      float v{1.0f}; // v value
       bf v_color; // v_color means the color of 'v'
-      if (winner == 0) {
+      if (winner == 0) { // draw
         while (cur_node != root) {
           auto &p = cur_node->parent;
           p->w += 0.5; p->n += 1;
@@ -547,70 +503,28 @@ b_[i][j] = a.color();
       }
     }
 
-    unique_lock<mutex> lck(mtx);
-    trees.push_back(unique_ptr<Tree>(root));
-  }
-
-  void AGoTree::retrieve_pv()
-  {
-    string buf;
-    while (true) {
-      // retrieve... and save in the pvs
-      task_in >> buf;
-      if (buf == "task_data") {
-
-        unsigned long task_id;
-        task_in >> task_id;
-        unique_ptr<float[]> pv(new float[19*19+1+1]);
-        for (int i = 0; i < 19*19+1+1; ++i) {
-          task_in >> pv[i];
-        }
-
-        unique_lock<mutex> lck(mtx);
-        pvs[task_id] = std::move(pv);
-        g_forbid_access_pvs[task_id] = false;
-        cv.notify_all();
-      } else if (buf == "genmove_finish") {
-        break;
-      }
-    }
+    return root;
   }
 
   void AGoTree::genmove()
   {
     assert(std::numeric_limits<float>::has_infinity);
     assert(!Tree::is_game_end(_cur_node, _cur_board));
-    static float tau = 1.0f;
     if (!is_nn_ready)
-      throw std::runtime_error("Neural Network(pytorch) is not ready!");
+      throw runtime_error("Neural Network(pytorch) is not ready!");
 
-    task_out << "start {}"_format(core_num) << endl;
-    vector<thread> tasks;
-    for (unsigned i = 0; i < core_num; i++)
-      tasks.push_back(thread(&AGoTree::search, this));
+    auto root = search();
 
-    thread retrieve_task(&AGoTree::retrieve_pv, this);
-
-    for (auto &task : tasks)
-      task.join();
-    task_out << "genmove_finish" << endl;
-
-    retrieve_task.join();
-
-    // all tasks finished
     int sum{}; unique_ptr<float[]> p(new float[19*19+1]{}); // p : move probability dist
-    for (unsigned i = 0; i < core_num; i++) {
-      for (auto &c : trees[i]->children) {
-        if (c->a.is_pass()) {
-          p[19*19] += c->n;
-        } else {
-          const auto &ind = c->a.coord();
-          p[std::get<0>(ind)*19+std::get<1>(ind)] += c->n;
-        }
-        sum += c->n;
+    for (auto &c : root->children) {
+      if (c->a.is_pass()) {
+        p[19*19] += c->n;
+      } else {
+        const auto &ind = c->a.coord();
+        p[std::get<0>(ind)*19+std::get<1>(ind)] += c->n;
       }
+      sum += c->n;
     }
-    trees.clear();
     if (sum != 0) for (int i = 0; i < 19*19+1; ++i) { p[i] /= sum; }
 
     // choose one position to put on stone
@@ -632,7 +546,7 @@ b_[i][j] = a.color();
     std::random_device rd;
     std::mt19937 gen(rd());
     std::discrete_distribution<> d(discrete_dist, discrete_dist+19*19+1);
-    ind = ind != 999?ind:d(gen);
+    ind = ind != 999 ? ind : d(gen);
     const auto &color_to_play = utils::reverse_bf(_cur_node->a.color());
 
     Action action_to_gen;
@@ -643,15 +557,14 @@ b_[i][j] = a.color();
       } else {
         action_to_gen = Action(color_to_play, ind/19, ind%19);
       }
-    } while (!Tree::check_valid_move(action_to_gen, _cur_board) &&
-        ((ind = d(gen)) || true));
+    } while ( !Tree::check_valid_move(action_to_gen, _cur_board)
+        && ((ind = d(gen)) || true) );
     _cur_node->push_back_child(action_to_gen, _cur_board);
 
     Tree::move(_cur_node, _cur_node->children[0], _cur_board);
     _cur_node->dist = std::move(p);
     _cur_node = _cur_node->children[0];
     cout << _cur_board;
-
   }
 
   void AGoTree::start_selfplay()
@@ -666,41 +579,37 @@ b_[i][j] = a.color();
     if (b == w) winner = 0;
 
     // serializing the data
-    static unsigned name_cnt = 0;
-    static string filename = "data/" + std::this_thread::get_id() + "/game";
-    auto file = std::ofstream(filename + "{:0>5}"_format(name_cnt--));
+    static const string tmp = "data/{}/tmp"_format(std::this_thread::get_id());
+    auto file = std::ofstream(tmp);
     while (_cur_node->a != Action::root) {
       auto &p = _cur_node->parent;
       Tree::undo_move(_cur_node, _cur_board);
       s = utils::get_game_state(p, _cur_board);
-      file << s << "="; // data
-      // label
-      for (int i = 0; i < 19*19+1; ++i) {
+
+      file << s << "=";
+
+      for (int i = 0; i < 19*19+1; ++i)
         file << p->dist[i] << ":";
-      }
-      if (winner == 0 || p->a == Action::root) {
+      if (winner == 0 || p->a == Action::root)
         file << "d";
-      } else if (winner == int(p->a.color())) {
+      else if (winner == int(p->a.color()))
         file << "w ";
-      } else {
+      else
         file << "l";
-      }
+
       file << "=" << string(p->a) << endl;
       _cur_node = p;
     }
-    file.close();
     while (_cur_node->a != Action::root)
       _cur_node = _cur_node->parent;
     _cur_node->clear_children();
   }
 
   AGoTree::AGoTree()
-    : core_num(thread::hardware_concurrency()),
-    c_puct(4.0f), num_simulate(1600)
+    : num_simulate(1600), c_puct(4.0f), tau(1.0f)
   {
-    core_num = core_num > 4 ? 4 : core_num;
-    core_num = 1;
-    assert(ref_count==0);
+    if ( ref_count != 0 )
+      throw runtime_error("AGoTree object is constructed in multiple times.");
     ++ref_count;
     init_nn();
     PUCT = [this] (Tree *node)
@@ -709,8 +618,8 @@ b_[i][j] = a.color();
       float Q = node->n == 0?0:node->w / node->n;
       auto &p = node->parent;
       assert(std::accumulate(p->children.begin(), p->children.end(), 0,
-            [] (int n, Tree *rhs) { return n + rhs->n; })
-          == int(p->n - 1) || p->children.empty());
+            [] (int n, Tree *rhs) { return n + rhs->n; }) == int(p->n - 1)
+          || p->children.empty());
       int sum_n = p->n;
       float U = c_puct * node->p * std::sqrt(sum_n) / float(1 + node->n);
       return Q + U;
@@ -722,55 +631,55 @@ b_[i][j] = a.color();
     cin >> num_simulate;
   }
 
-AGoTree::~AGoTree() { stop_nn(); --ref_count; }
+  AGoTree::~AGoTree() { stop_nn(); --ref_count; }
 
-// }}}
+  // }}}
 
-// *************** struct Board *************** {{{
-const tuple<col_t,row_t> Board::no_stone = make_tuple(19, 19);
-Board::Board() {
-  for (int i = 0; i < 19; i++)
-    for (int j = 0; j < 19; j++)
-      _board[i][j] = bf::empty;
-}
-std::ostream &operator <<(std::ostream &out, Board &board)
-{
-  constexpr auto ban = "   a b c d e f g h j k l m n o p q r s t";
-
-  col_t cur_i; col_t cur_j;
-  std::tie(cur_i, cur_j) = board._cur_stone;
-
-  cout << ban << endl;
-  for (int j = 18; j >= 0; --j) {
-    string line = " . . . . . . . . . . . . . . . . . . . ";
-
-    if (j == 3 || j == 9 || j == 15) {
-      line[2*3+1] = '+';
-      line[2*9+1] = '+';
-      line[2*15+1] = '+';
-    }
-
-    const auto &b = board._board;
-    for (int i = 18; i >= 0; --i) {
-      assert(b[i][j] == bf::black || b[i][j] == bf::white || b[i][j] == bf::empty);
-      if (b[i][j] == bf::black)
-        line[2*i+1] = 'X';
-      else if (b[i][j] == bf::white)
-        line[2*i+1] = 'O';
-    }
-
-    // mark _cur_stone
-    if (j == int(cur_j) && board._cur_stone != Board::no_stone) {
-      line[2*cur_i] = '('; line[2*cur_i+2] = ')';
-    }
-
-    auto row_num = "{:>2}"_format(j+1);
-    line = row_num + line + row_num;
-    cout << line << endl;
+  // *************** struct Board *************** {{{
+  const tuple<col_t,row_t> Board::no_stone = make_tuple(19, 19);
+  Board::Board() {
+    for (int i = 0; i < 19; i++)
+      for (int j = 0; j < 19; j++)
+        _board[i][j] = bf::empty;
   }
-  cout << ban << endl;
-  return out;
-}
-// }}}
+  std::ostream &operator <<(std::ostream &out, Board &board)
+  {
+    constexpr auto ban = "   a b c d e f g h j k l m n o p q r s t";
+
+    col_t cur_i; col_t cur_j;
+    std::tie(cur_i, cur_j) = board._cur_stone;
+
+    cout << ban << endl;
+    for (int j = 18; j >= 0; --j) {
+      string line = " . . . . . . . . . . . . . . . . . . . ";
+
+      if (j == 3 || j == 9 || j == 15) {
+        line[2*3+1] = '+';
+        line[2*9+1] = '+';
+        line[2*15+1] = '+';
+      }
+
+      const auto &b = board._board;
+      for (int i = 18; i >= 0; --i) {
+        assert(b[i][j] == bf::black || b[i][j] == bf::white || b[i][j] == bf::empty);
+        if (b[i][j] == bf::black)
+          line[2*i+1] = 'X';
+        else if (b[i][j] == bf::white)
+          line[2*i+1] = 'O';
+      }
+
+      // mark _cur_stone
+      if (j == int(cur_j) && board._cur_stone != Board::no_stone) {
+        line[2*cur_i] = '('; line[2*cur_i+2] = ')';
+      }
+
+      auto row_num = "{:>2}"_format(j+1);
+      line = row_num + line + row_num;
+      cout << line << endl;
+    }
+    cout << ban << endl;
+    return out;
+  }
+  // }}}
 
 }

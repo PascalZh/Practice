@@ -12,9 +12,9 @@ $(shell if [ ! -d build ]; then mkdir build; fi)
 Test : $(test_objects)
 	g++ -o Test $(test_objects) $(LDFLAGS)
 
-build/test.o : test/test.cpp AGo.h AGo.inl
+build/test.o : test/test.cpp AGo.h
 	g++ -o build/test.o -c test/test.cpp $(CFLAGS)
-build/AGo.o : AGo.cpp AGo.h AGo.inl
+build/AGo.o : AGo.cpp AGo.h
 	g++ -o build/AGo.o -c AGo.cpp $(CFLAGS)
 .PHONY : clean
 clean :

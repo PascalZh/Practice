@@ -1,0 +1,26 @@
+\usepackage{geometry}
+\usepackage{setspace}
+
+\geometry{a4paper,left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm}
+\renewcommand{\baselinestretch}{1.0}
+\setlength{\parindent}{2em}
+
+\usepackage{indentfirst}
+
+%一级子标题居中效果
+\usepackage[center]{titlesec}
+\titleformat*{\subsection}{\raggedright\bf\large}
+\titleformat*{\subsubsection}{\raggedright}
+
+\usepackage{xeCJK}
+\xeCJKsetup{AutoFakeBold=true,EmboldenFactor=1}
+\setCJKmainfont{SimSun}
+%\setCJKmainfont{Adobe Heiti Std}
+
+\setCJKfamilyfont{song}{SimSun}
+\newcommand*{\songti}{\CJKfamily{song}}
+
+\setCJKfamilyfont{hei}{Adobe Heiti Std}
+\newcommand*{\heiti}{\CJKfamily{hei}}
+
+\usepackage{bm}
