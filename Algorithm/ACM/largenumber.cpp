@@ -15,7 +15,7 @@ public:
 	LLL(Node *n) :h(n) {}
 	Node *getNode() {return h;}
 	~LLL() { this-> destroy();}
-	destroy() { 
+	void destroy() { 
 		auto head = this -> h;
 		while (head != nullptr) {
 			auto tmp = head;

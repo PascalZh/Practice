@@ -1,0 +1,11 @@
+body {
+    --c_routine: #009933;
+}
+
+.routine {
+    background-color: var(--c_routine);
+}
+.routine_name {
+    display: inline;
+    font-weight: normal;
+}
