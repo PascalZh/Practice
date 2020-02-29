@@ -21,7 +21,7 @@ using SearchTreeBase = std::map<pinyin_t, std::vector<std::string>>;
 
 class WordQuerySimple : public WordQueryBase
 {
-private:
+public:
     struct query_record_t {
         pinyin_t pinyin;
         std::vector<std::string> candidates;
@@ -29,9 +29,13 @@ private:
     
     std::vector<query_record_t> records;
     std::unique_ptr<SearchTreeBase> cache;
+    WordQuerySimple();
     
-public:
     void query(pinyin_t, size_t);
 
-    WordQuerySimple();
 };
+
+#if defined if_
+#error "some macro defined before!"
+#endif
+#define if_(x, y) x; if(y)

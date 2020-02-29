@@ -1,6 +1,6 @@
 #include "core.h"
 #include <exception>
-using std::vector, std::map, std::string, std::wstring, std::cout, std::cin, std::endl;
+using std::vector; using std::map; using std::string; using std::wstring; using std::cout; using std::cin; using std::endl;
 
 void split(const string& s, vector<string>& tokens, const string& delimiters);
 
@@ -12,6 +12,9 @@ WordQuerySimple::WordQuerySimple()
     string nSogou = "sogou_lexicon.txt";
     auto fGBK = std::ifstream(nGBK);
     auto fSogou = std::ifstream(nSogou);
+    if (!fGBK.is_open()) {
+        throw std::runtime_error(string()+ "open " + nGBK + " failed!");
+    }
 
     while (getline(fGBK, buf)) {
         //std::cout << buf << std::endl;
@@ -23,8 +26,8 @@ WordQuerySimple::WordQuerySimple()
         }
         //std::cout << w[0] << std::endl;
         //std::cout << string(w[1].begin(), w[1].end()) << std::endl;
-        
-        if (auto it = cache -> find(w[0]); it == cache -> end()) {
+
+        if_(auto it = cache -> find(w[0]), it == cache -> end()) {
             vector<string> words{w[1]};
             cache -> insert({w[0], std::move(words)});
         } else {
@@ -49,7 +52,7 @@ void WordQuerySimple::query(
     // single word query
     query_record_t q;
     q.pinyin = pinyin;
-    if (auto it = cache -> find(pinyin); it == cache -> end()) {
+    if_(auto it = cache -> find(pinyin), it == cache -> end()) {
         ;
     } else {
         vector<string> tmp(n_candidates);
@@ -63,10 +66,10 @@ void WordQuerySimple::query(
         q.candidates = std::move(tmp);
     }
     records.push_back(std::move(q));
-    for (auto& c : records.back().candidates) {
-        cout << c;
-    }
-    cout << endl;
+    //for (auto& c : records.back().candidates) {
+        //cout << c;
+    //}
+    //cout << endl;
 }
 
 void split(const string& s, vector<string>& tokens, const string& delimiters=" ")
