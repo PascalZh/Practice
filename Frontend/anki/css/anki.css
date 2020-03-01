@@ -4,15 +4,26 @@ html {
     --panel-width: 57px;
     --menu-height: 30px;
 }
-
 body {
     margin: 0px;
 }
+
 .main-panel {
     position: absolute;
     width: var(--panel-width);
     height: calc(100vh - var(--menu-height));
     background-color: var(--c-panel);
+}
+.panel-item {
+    width: var(--panel-width);
+    height: var(--panel-width);
+    /*background-color: cyan;*/
+}
+.panel-item svg path {
+    fill: #e6e6e6;
+}
+.panel-item svg:hover path {
+    fill: #ffffff;
 }
 
 .main-menu {
@@ -28,15 +39,8 @@ body {
     height: calc(100vh - var(--menu-height));
 }
 
-.panel-item {
-    width: var(--panel-width);
-    height: var(--panel-width);
-    /*background-color: cyan;*/
-}
 
-.panel-item svg path {
-    fill: #e6e6e6;
-}
-.panel-item svg:hover path {
-    fill: #ffffff;
+.terminal {
+    width: 100%;
+    height: 100%;
 }

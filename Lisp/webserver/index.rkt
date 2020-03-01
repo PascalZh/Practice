@@ -385,7 +385,7 @@
   ;(current-output-port (open-output-file "log/output.log" #:exists 'append))
   (def request-output (open-output-file "log/request.log" #:exists 'append))
 
-  (process "features/filter_request_log.py")
+  ;(process "features/filter_request_log.py")
 
   (serve/servlet start
                  #:port 8888
@@ -398,7 +398,7 @@
                  #:server-root-path "."
                  #:servlets-root "."
                  #:command-line? #t
-                 #:log-file request-output
+                 ;#:log-file request-output
                  ;#:ssl? #t
                  ;#:ssl-cert "./server-cert.pem"
                  ;#:ssl-key "./private-key.pem"
