@@ -13,19 +13,20 @@
             </div>
         </div>
 
-        <div id="main-ui" class="main-container">
+        <div class="main-container">
             <!--a scheme for notebook hierarchical organization:-->
             <!--notebook -> section -> subsection -> note(correspond to card in anki)-->
             <!--This is similar to a book, so turn it to a book if you like.-->
             <!--subsection is a markdown file.-->
             <!--note is divided automatically from subsection, based on markdown syntax or some self-defined syntax.-->
-            <div class="anki-add">
-                <div class="notebook">
-                    <div class="section">
-                        <div class="subsection">
-                        </div>
-                    </div>
+            <div class="editor-column">
+                <div class="editor-panel">
+                    <textarea class="editor-input" autocorrect="off" autocapitalize="off" spellcheck="false" wrap="off"></textarea>
+                    <div class="editor-layer-cursor"></div>
+                    <div class="editor-layer-marker"></div>
+                    <div class="editor-layer-text"></div>
                 </div>
+                <div class="editor-toolbar"></div>
             </div>
             <div class="anki-review" hidden>
             </div>
