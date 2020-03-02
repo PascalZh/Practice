@@ -1,11 +1,10 @@
 #include "core.h"
+#include "utils.h"
 #include <exception>
 using std::vector; using std::map; using std::string; using std::wstring; using std::cout; using std::cin; using std::endl;
 
-void split(const string& s, vector<string>& tokens, const string& delimiters);
-
 WordQuerySimple::WordQuerySimple()
-    : cache(new SearchTreeBase())
+    : cache(new SearchTreeSimple()), max_records(1000)
 {
     string buf;
     string nGBK = "GBK.txt";
@@ -56,29 +55,20 @@ void WordQuerySimple::query(
         ;
     } else {
         vector<string> tmp(n_candidates);
-        auto start_it = it -> second.begin();
-        auto traverse_it = it -> second.begin();
-        auto end_it = it -> second.end();
-        for (size_t i = 0; i < n_candidates && traverse_it != end_it; i++) {
-            traverse_it++;
+        auto first = it -> second.begin();
+        auto last = it -> second.end();
+        for (size_t i = 0; i < n_candidates && first != last; i++) {
+            first++;
         }
-        tmp.assign(start_it, traverse_it);
+        tmp.assign(it -> second.begin(), first);
         q.candidates = std::move(tmp);
     }
-    records.push_back(std::move(q));
+    
+    records.push(std::move(q));
+    if (records.size() > this -> max_records && !records.empty())
+        records.pop();
     //for (auto& c : records.back().candidates) {
         //cout << c;
     //}
     //cout << endl;
-}
-
-void split(const string& s, vector<string>& tokens, const string& delimiters=" ")
-{
-    string::size_type lastPos = s.find_first_not_of(delimiters, 0);
-    string::size_type pos = s.find_first_of(delimiters, lastPos);
-    while (string::npos != pos || string::npos != lastPos) {
-        tokens.push_back(s.substr(lastPos, pos - lastPos));
-        lastPos = s.find_first_not_of(delimiters, pos);
-        pos = s.find_first_of(delimiters, lastPos);
-    }
 }

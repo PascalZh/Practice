@@ -6,9 +6,12 @@ tmp/
 
 *.exe
 *.out
+*.so
+*.o
 *.log
 *.aux
 *.pdf
+*.db
 
 /C51/whut_homeworks/LED/*
 !/C51/whut_homeworks/LED/*.c
@@ -23,3 +26,6 @@ foobar.*
 /ANN/bp_nn/dataset
 /ANN/bp_nn/result
 /ANN/**/*.sty
+
+/C++/blitz/src/*.txt
+/C++/blitz/src/test

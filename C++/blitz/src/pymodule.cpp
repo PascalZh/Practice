@@ -6,13 +6,13 @@ using std::string;
 class WordQuery : public WordQuerySimple
 {
 public:
-    py::tuple get_last_query()
+    py::tuple py_get_last_query()
     {
         py::tuple ret(2);
         py::list word;
-        query_record_t record = records.back();
-        ret[0] = record.pinyin;
-        for (string& c : record.candidates) {
+        const query_record_t * record = this -> get_last_query();
+        ret[0] = record -> pinyin;
+        for (const string& c : record -> candidates) {
             word.append<char *>(const_cast<char *>(c.c_str()));
         }
         ret[1] = word;
@@ -25,5 +25,5 @@ PYBIND11_MODULE(blitz, m) {
     py::class_<WordQuery>(m, "WordQuery")
         .def(py::init())
         .def("query", &WordQuery::query)
-        .def("get_last_query", &WordQuery::get_last_query, py::return_value_policy::reference);
+        .def("get_last_query", &WordQuery::py_get_last_query, py::return_value_policy::reference);
 }
