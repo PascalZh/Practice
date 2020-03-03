@@ -1,4 +1,4 @@
-mainUI = document.getElementById('main-ui')
+mainUI = document.getElementsByClassName('main-container')[0]
 var tabs = mainUI.children
 for (i = 0; i < tabs.length; i++) {
     tabs.item(i).classList.add('animated', 'fadeIn')

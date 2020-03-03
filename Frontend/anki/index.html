@@ -21,10 +21,13 @@
             <!--note is divided automatically from subsection, based on markdown syntax or some self-defined syntax.-->
             <div class="editor-column">
                 <div class="editor-panel">
-                    <textarea class="editor-input" autocorrect="off" autocapitalize="off" spellcheck="false" wrap="off"></textarea>
+                    <!--<textarea class="editor-input" autocorrect="off" autocapitalize="off" spellcheck="false" wrap="off"></textarea>-->
+                    <textarea class="editor-input" spellcheck="false"></textarea>
                     <div class="editor-layer-cursor"></div>
                     <div class="editor-layer-marker"></div>
-                    <div class="editor-layer-text"></div>
+                    <div class="editor-layer-text">
+                        <div class="editor-text-line editor-current-line"></div>
+                    </div>
                 </div>
                 <div class="editor-toolbar"></div>
             </div>
@@ -35,6 +38,7 @@
             </div>
         </div>
         <script src="js/anki.js"></script>
+        <script src="js/editor.js"></script>
         <script src="js/terminal.js"></script>
     </body>
 </html>
