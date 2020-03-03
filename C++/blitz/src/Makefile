@@ -7,6 +7,9 @@ all: test lib
 .PHONY: lib
 lib: $(so)
 
+gbk.o: gbk.txt
+	objcopy -I binary -O elf64-x86-64 -B i386:x86-64 gbk.txt gbk.o
+
 utils.o: utils.cpp utils.h
 	g++ $(FLAGS) -c -o $@ $<
 
@@ -19,8 +22,8 @@ test.o: test.cpp
 $(so): pymodule.cpp core.cpp utils.cpp utils.h core.h
 	g++ $(FLAGS) -shared -fPIC `python3 -m pybind11 --includes` pymodule.cpp utils.cpp core.cpp -o $(so)
 
-test: test.o core.o utils.o
-	g++ $(FLAGS) utils.o test.o core.o -o test
+test: test.o core.o utils.o gbk.o
+	g++ $(FLAGS) utils.o test.o core.o gbk.o -o test
 
 .PHONY: clean
 clean:

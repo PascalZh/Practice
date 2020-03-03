@@ -3,50 +3,32 @@
 #include <exception>
 using std::vector; using std::map; using std::string; using std::wstring; using std::cout; using std::cin; using std::endl;
 
+extern char _binary_gbk_txt_start;
+
 WordQuerySimple::WordQuerySimple()
     : cache(new SearchTreeSimple()), max_records(1000)
 {
-    string buf;
-    string nGBK = "GBK.txt";
     string nSogou = "sogou_lexicon.txt";
-    auto fGBK = std::ifstream(nGBK);
     auto fSogou = std::ifstream(nSogou);
-    if (!fGBK.is_open()) {
-        throw std::runtime_error(string()+ "open " + nGBK + " failed!");
-    }
 
-    while (getline(fGBK, buf)) {
-        //std::cout << buf << std::endl;
-        
+    string basic_lexicon_raw(&_binary_gbk_txt_start);
+    vector<string> basic_lexicon;
+    split(basic_lexicon_raw, basic_lexicon, "\n");
+    for (auto& line : basic_lexicon) {
         vector<string> w;
-        split(buf, w, "=");
-        if (w.size() != 2) {
-            throw std::runtime_error(nGBK + "file parse error:");
-        }
-        //std::cout << w[0] << std::endl;
-        //std::cout << string(w[1].begin(), w[1].end()) << std::endl;
-
+        split(line, w, "=");
+        if (w.size() != 2) throw std::runtime_error("There are some problems with gbk.o file.");
         if_(auto it = cache -> find(w[0]), it == cache -> end()) {
-            vector<string> words{w[1]};
-            cache -> insert({w[0], std::move(words)});
+            vector<string> words{std::move(w[1])};
+            cache -> insert({std::move(w[0]), std::move(words)});
         } else {
-            it -> second.push_back(w[1]);
+            it -> second.push_back(std::move(w[1]));
         }
     }
-    //for ( auto&[pinyin, words] : *cache) {
-        //std::cout << pinyin << std::endl;
-        //for ( auto& word : words ) {
-            //std::cout << word;
-        //}
-        //std::cout << std::endl;
-    //}
 }
 
 
-void WordQuerySimple::query(
-          pinyin_t pinyin
-        , size_t n_candidates
-        )
+void WordQuerySimple::query(pinyin_t pinyin, size_t n_candidates)
 {
     // single word query
     query_record_t q;
@@ -55,15 +37,14 @@ void WordQuerySimple::query(
         ;
     } else {
         vector<string> tmp(n_candidates);
-        auto first = it -> second.begin();
-        auto last = it -> second.end();
+        auto first = it -> second.begin(); auto last = it -> second.end();
         for (size_t i = 0; i < n_candidates && first != last; i++) {
             first++;
         }
         tmp.assign(it -> second.begin(), first);
         q.candidates = std::move(tmp);
     }
-    
+
     records.push(std::move(q));
     if (records.size() > this -> max_records && !records.empty())
         records.pop();

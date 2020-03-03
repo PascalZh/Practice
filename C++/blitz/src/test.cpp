@@ -61,12 +61,25 @@ vector<string> valid_pinyin = {
 };
 
 void test_single(WordQueryBase * w);
+extern char _binary_gbk_txt_start;
+extern char _binary_gbk_txt_end;
 
 int main()
 {
+    char *p_start = &_binary_gbk_txt_start;
+    char *p_end = &_binary_gbk_txt_end;
+    //cout << p_start << endl;
+    
     WordQueryBase * w = new WordQuerySimple();
+    w -> query("ni", 10);
+    const query_record_t* q = w -> get_last_query();
+    for (auto& x: q -> candidates)
+        cout << x;
+    cout << endl;
+    
     test_single(w);
     cin.get();
+    delete w;
     return 0;
 }
 
