@@ -2,16 +2,11 @@
 // lexicon指词库
 // The lexicon is parsed into a data structure, such as AVL tree, splay tree.
 // To define a abstract tree, we call a node as a Block, Block class must implement the following functions:
-// Block<T>::Scope Block<T>::has_key(T);
-// enum class Block<T>::Scope = { LeftSide, In, RightSide };
+// BlockT::P::LeftSide BlockT::has_key(T);
+// enum class BlockT::P = { LeftSide, True, RightSide };
 // Block can be a block of data, or a pointer pointing to a block of data.
 
-
-template <class T>
-class Block;
-
-template <class T>
-template <class BlockT = Block<T> >
+template <class T, class BlockT>
 class SplayTree {
     private:
         struct Node {
@@ -33,10 +28,15 @@ class SplayTree {
             Node N, *l, *r, *y;
             if (t == nullptr) return t;
             l = r = &N;
-            using BS = BlockT::Scope;
-            auto lt = [](T x, BlockT b) {return b.has_key(i) == BS::LeftSide};
-            auto gt = [](T x, BlockT b) {return b.has_key(i) == BS::RightSide};
-            auto eq = [](T x, BlockT b) {return b.has_key(i) == BS::In};
+            auto lt = [](T x, BlockT b) {
+                return b.has_key(x) == BlockT::P::LeftSide;
+            };
+            auto gt = [](T x, BlockT b) {
+                return b.has_key(x) == BlockT::P::RightSide;
+            };
+            auto eq = [](T x, BlockT b) {
+                return b.has_key(x) == BlockT::P::True;
+            };
             while (true) {
                 if (lt(i, t->block)) {
                     if (t->left != nullptr && lt(i, t->left->block)) {

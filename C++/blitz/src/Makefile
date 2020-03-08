@@ -2,7 +2,7 @@
 so = blitz.cpython-36m-x86_64-linux-gnu.so
 CFLAGS = -std=c++11
 
-all: test lib
+all: test
 
 .PHONY: lib
 lib: $(so)

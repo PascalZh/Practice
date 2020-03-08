@@ -60,31 +60,30 @@ vector<string> valid_pinyin = {
 "zhui", "zhun", "zhuo", "zi", "zong", "zou", "zu", "zuan", "zui", "zun",  "zuo"
 };
 
-void test_single(WordQueryBase * w);
-extern char _binary_gbk_txt_start;
-extern char _binary_gbk_txt_end;
+void test_single_pinyin();
+void test_ciyu();
 
 int main()
 {
-    char *p_start = &_binary_gbk_txt_start;
-    char *p_end = &_binary_gbk_txt_end;
     //cout << p_start << endl;
     
-    WordQueryBase * w = new WordQuerySimple();
-    w -> query("ni", 10);
-    const query_record_t* q = w -> get_last_query();
-    for (auto& x: q -> candidates)
-        cout << x;
-    cout << endl;
-    
-    test_single(w);
+    test_single_pinyin();
+    test_ciyu();
     cin.get();
-    delete w;
     return 0;
 }
 
-void test_single(WordQueryBase * w)
+void test_single_pinyin()
 {
+    
+    WordQueryBase * w = new WordQuerySimple();
+    w -> query("ni", 10);
+    const query_record_t * q = w -> get_last_query();
+    cout << q -> pinyin << endl;
+    for (auto& x: q -> candidates)
+        cout << x;
+    cout << endl;
+
     int n = 1000;
     auto t1 = std::chrono::high_resolution_clock::now();
     for (int i=0;i<n;i++)
@@ -95,4 +94,17 @@ void test_single(WordQueryBase * w)
     std::chrono::duration<double, std::milli> ms = t2 - t1;
 	cout << "test single: "  << ms.count()
         << "ms, " << ms.count() / n / valid_pinyin.size() * 1000 << "us per time" << endl;
+    delete w;
+}
+
+void test_ciyu()
+{
+    WordQueryBase * w = new WordQuerySimple();
+    w -> query("ni'hao", 10);
+    const query_record_t * q = w -> get_last_query();
+    cout << q -> pinyin << endl;
+    for (auto& x: q -> candidates)
+        cout << x;
+    cout << endl;
+    delete w;
 }

@@ -8,32 +8,43 @@ extern char _binary_gbk_txt_start;
 WordQuerySimple::WordQuerySimple()
     : cache(new SearchTreeSimple()), max_records(1000)
 {
-    string nSogou = "sogou_lexicon.txt";
-    auto fSogou = std::ifstream(nSogou);
-
-    string basic_lexicon_raw(&_binary_gbk_txt_start);
-    vector<string> basic_lexicon;
-    split(basic_lexicon_raw, basic_lexicon, "\n");
-    for (auto& line : basic_lexicon) {
+    // parse gbk.txt
+    string gbk_raw(&_binary_gbk_txt_start);
+    vector<string> gbk;
+    split(gbk_raw, gbk, "\n");
+    for (auto& line : gbk) {
         vector<string> w;
         split(line, w, "=");
         if (w.size() != 2) throw std::runtime_error("There are some problems with gbk.o file.");
-        if_(auto it = cache -> find(w[0]), it == cache -> end()) {
+        pinyin_t py(w[0]);
+        if_(auto it = cache -> find(py), it == cache -> end()) {
             vector<string> words{std::move(w[1])};
-            cache -> insert({std::move(w[0]), std::move(words)});
+            cache -> insert(std::pair<pinyin_t, vector<string>>(py, words));
         } else {
             it -> second.push_back(std::move(w[1]));
         }
     }
+
+    // parse sogou_lexicon.txt, it takes about 1s, FIXME
+    string path_sogou = "sogou_lexicon.txt";
+    std::ifstream in_sogou(path_sogou);
+    string buf1, buf2;
+    while (in_sogou >> buf1 >> buf2) {
+        pinyin_t py(buf1.substr(1));
+        vector<string> words({std::move(buf2)});
+        cache -> insert(std::pair<pinyin_t, vector<string>>(py, words));
+    }
 }
 
 
-void WordQuerySimple::query(pinyin_t pinyin, size_t n_candidates)
+void WordQuerySimple::query(const string &pinyin, size_t n_candidates)
 {
     // single word query
-    query_record_t q;
-    q.pinyin = pinyin;
-    if_(auto it = cache -> find(pinyin), it == cache -> end()) {
+    query_record_t q = {
+        .pinyin = pinyin
+    };
+    pinyin_t py(pinyin);
+    if_(auto it = cache -> find(py), it == cache -> end()) {
         ;
     } else {
         vector<string> tmp(n_candidates);
@@ -45,9 +56,9 @@ void WordQuerySimple::query(pinyin_t pinyin, size_t n_candidates)
         q.candidates = std::move(tmp);
     }
 
-    records.push(std::move(q));
-    if (records.size() > this -> max_records && !records.empty())
-        records.pop();
+    this -> records.push_back(std::move(q));
+    //if (records.size() > this -> max_records && !records.empty())
+        //records.pop();
     //for (auto& c : records.back().candidates) {
         //cout << c;
     //}

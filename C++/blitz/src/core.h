@@ -5,6 +5,7 @@
 #include <queue>
 #include <list>
 #include <string>
+#include <string.h>
 #include <map>
 #include <array>
 #include <fstream>
@@ -12,17 +13,49 @@
 #include <sstream>
 #include <memory>
 
-using pinyin_t = std::string;
+class pinyin_t {
+    private:
+        char * code;
+    public:
+        explicit pinyin_t(const pinyin_t &s) {
+            const auto &s_ = s.code;
+            this -> code = new char[strlen(s_)+1];
+            strcpy(code, s_);
+        }
+        explicit pinyin_t(const std::string &s) {
+            const auto &s_ = s.c_str();
+            this -> code = new char[strlen(s_)+1];
+            strcpy(code, s_);
+        }
+        bool operator<(const pinyin_t & rhs) const {
+            const auto &c1 = this -> code;
+            const auto &c2 = rhs.code;
+            size_t n1 = strlen(c1);
+            size_t n2 = strlen(c2);
+            size_t m = n1 < n2 ? n1 : n2;
+            for (size_t i = 0; i < m; i++) {
+                if (c1[i] < c2[i]) {
+                    return true;
+                } else if (c1[i] > c2[i]) {
+                    return false;
+                }
+            }
+            // now any of c1, c2 is a substr of each other
+            // this says "ni" < "ni'hao"
+            return n1 < n2;
+        }
+        ~pinyin_t() { delete code; }
+};
 
 struct query_record_t {
-    pinyin_t pinyin;
+    std::string pinyin;
     std::vector<std::string> candidates;
 };
 
 class WordQueryBase
 {
     public:
-        virtual void query(pinyin_t pinyin, size_t n_candidates) = 0;
+        virtual void query(const std::string &pinyin, size_t n_candidates) = 0;
         virtual const query_record_t * get_last_query() const = 0;
 };
 
@@ -34,7 +67,7 @@ class WordQuerySimple : public WordQueryBase
     public:
 
     private:
-        std::queue<query_record_t, std::list<query_record_t>> records;
+        std::vector<query_record_t> records;
         const std::unique_ptr<SearchTreeSimple> cache;
 
         size_t max_records;
@@ -42,7 +75,7 @@ class WordQuerySimple : public WordQueryBase
     public:
         WordQuerySimple();
 
-        void query(pinyin_t, size_t);
+        void query(const std::string &, size_t);
 
         const query_record_t * get_last_query() const {
             return &records.back();
