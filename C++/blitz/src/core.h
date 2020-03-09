@@ -12,26 +12,31 @@
 #include <iostream>
 #include <sstream>
 #include <memory>
+#include <cassert>
 
 class pinyin_t {
     private:
-        char * code;
+        std::string code;
     public:
-        explicit pinyin_t(const pinyin_t &s) {
-            const auto &s_ = s.code;
-            this -> code = new char[strlen(s_)+1];
-            strcpy(code, s_);
+        static unsigned long long total_size;
+        static unsigned long long total_capacity;
+        static unsigned long long total_n;
+        pinyin_t(pinyin_t &&s) : code(std::move(s.code)) {}
+        pinyin_t(const pinyin_t &s) : code(s.code) {
+            total_size += code.size();
+            total_capacity += code.capacity();
+            total_n++;
         }
-        explicit pinyin_t(const std::string &s) {
-            const auto &s_ = s.c_str();
-            this -> code = new char[strlen(s_)+1];
-            strcpy(code, s_);
+        explicit pinyin_t(const std::string &s) : code(s) {
+            total_size += code.size();
+            total_capacity += code.capacity();
+            total_n++;
         }
         bool operator<(const pinyin_t & rhs) const {
             const auto &c1 = this -> code;
             const auto &c2 = rhs.code;
-            size_t n1 = strlen(c1);
-            size_t n2 = strlen(c2);
+            size_t n1 = c1.size();
+            size_t n2 = c2.size();
             size_t m = n1 < n2 ? n1 : n2;
             for (size_t i = 0; i < m; i++) {
                 if (c1[i] < c2[i]) {
@@ -44,7 +49,16 @@ class pinyin_t {
             // this says "ni" < "ni'hao"
             return n1 < n2;
         }
-        ~pinyin_t() { delete code; }
+        ~pinyin_t() {
+            if (!code.empty()) {
+                assert(total_size >= code.size() &&
+                        total_capacity >= code.capacity() &&
+                        total_n >= 1);
+                total_size -= code.size();
+                total_capacity -= code.capacity();
+                total_n--;
+            }
+        }
 };
 
 struct query_record_t {
@@ -59,7 +73,6 @@ class WordQueryBase
         virtual const query_record_t * get_last_query() const = 0;
 };
 
-
 using SearchTreeSimple = std::map<pinyin_t, std::vector<std::string>>;
 
 class WordQuerySimple : public WordQueryBase
@@ -68,7 +81,7 @@ class WordQuerySimple : public WordQueryBase
 
     private:
         std::vector<query_record_t> records;
-        const std::unique_ptr<SearchTreeSimple> cache;
+        SearchTreeSimple cache;
 
         size_t max_records;
 
@@ -87,4 +100,4 @@ class WordQuerySimple : public WordQueryBase
 #endif
 #define if_(x, y) x; if(y)
 
-#endif
+#endif /* __CORE_H__ */
