@@ -57,9 +57,9 @@ int main()
 {
     //cout << p_start << endl;
     
-    test_single_pinyin();
+    //test_single_pinyin();
     //test_ciyu();
-    //test_tree();
+    test_tree();
     cin.get();
     return 0;
 }
@@ -111,5 +111,5 @@ void test_pinyin_t()
 
 void test_tree()
 {
-    SearchTree<int, int> tree("foo");
+    SearchTree<int, int> tree("db");
 }

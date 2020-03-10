@@ -35,11 +35,7 @@ It will output `gbk.txt` file.
 1. 80-20 rule is used to load the most frequent records once initialized.
 2. Other records are loaded when needed. Maybe need some policy to load multiple records when an unloaded record is queried.
 #### implementation details
-* first line of the db file is some config information:
-    total_freq
 * A record is like this:
-    ni 2032:你 322:尼 11:呢
-* Most frequent records are kept in the front of the file.
-* If the needed record are in the line n, the first n lines will be read. This is because the file can only be read line by line when every line has different size.
-* Based on this feature, every time before closing the application will the `SearchTree` reorder the records and rewrite the whole file.
-* So we will need a backup system, this could be done later.
+    ni 2032 你
+    ni'hao 4019 你好
+* 

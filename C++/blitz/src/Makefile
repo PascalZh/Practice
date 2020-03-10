@@ -13,13 +13,13 @@ gbk.o: gbk.txt
 utils.o: utils.cpp utils.h
 	g++ $(FLAGS) -c -o $@ $<
 
-core.o: core.cpp core.h tree.h
+core.o: core.cpp core.h tree.h utils.h
 	g++ $(FLAGS) -c -o $@ $<
 
-test.o: test.cpp core.h tree.h
+test.o: test.cpp core.h tree.h utils.h
 	g++ $(FLAGS) -c -o $@ $<
 
-$(so): pymodule.cpp core.cpp utils.cpp utils.h core.h tree.h
+$(so): pymodule.cpp core.cpp utils.cpp
 	g++ $(FLAGS) -shared -fPIC `python3 -m pybind11 --includes` pymodule.cpp utils.cpp core.cpp -o $(so)
 
 test: test.o core.o utils.o gbk.o
