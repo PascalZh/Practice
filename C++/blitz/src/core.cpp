@@ -4,10 +4,6 @@
 #include <chrono>
 using std::vector; using std::map; using std::string; using std::wstring; using std::cout; using std::cin; using std::endl;
 
-unsigned long long pinyin_t::total_size = 0;
-unsigned long long pinyin_t::total_capacity = 0;
-unsigned long long pinyin_t::total_n = 0;
-
 extern char _binary_gbk_txt_start;
 
 WordQuerySimple::WordQuerySimple()

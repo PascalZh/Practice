@@ -7,17 +7,22 @@
 #include <exception>
 #include <map>
 #include <cassert>
+#include <list>
+#include <forward_list>
 
 template <class Key, class Value>
 class SearchTree {
+    private:
     using ios = std::ios; using string = std::string; using stringstream = std::stringstream;
     using runtime_error = std::runtime_error;
 
-    private:
     unsigned long long total_freq_acc;
     unsigned long long total_freq;
-    std::map<Key, std::vector<Value>> cache;
-    std::map<Key, std::vector<int>> index;
+
+    using Container = std::vector<Value>;
+    using Tree = std::map<Key, Container>;
+    Tree cache;
+    std::vector<Key> index;
     std::vector<int> loaded;
     string dir; // e.g. db, db has files: index.db, 0.db, 1.db, 2.db, ...
 
@@ -31,35 +36,60 @@ class SearchTree {
         // read index.db
         std::ifstream f(dir + "/index.db");
         if (!f) return;
-        string buf;
-        while (getline(f, buf)) {
-            stringstream ss(buf);
-            Key k; std::vector<int> indices;
-            ss >> k;
-            int idx;
-            while (ss >> idx) {
-                indices.push_back(idx);
-            }
-            index.insert({k, indices});
+        Key v;
+        while (f >> v) {
+            index.push_back(Key(v));
         }
-        load(0);
+        load(1);
     }
     auto find(const Key &k)
     {
-        auto it_ind = index.find(k);
-        for (int & idx : it_ind -> second)
-            load(idx);
-
-        return cache.find(k);
+        int i = 1;
+        for (auto ind = index.begin(); ind != index.end(); ind++, i++) {
+            if (k <= *ind) {
+                load(i);
+                return cache.find(k);
+            }
+        }
+        return cache.end();
     }
     auto begin() { return cache.begin(); }
     auto end() { return cache.end(); }
 
     // find, begin, end are just wrapper of map
     // but insert has different meaning rather than map
-    void insert(Key &&k, Value &&v)
+    void insert(Key &k, Value &v)
     {
+        auto it = cache.find(k);
+        if (it == cache.end()) {
+            Container vs(1, v);
+            cache.insert({k, std::move(vs)});
+        } else {
+            it -> second.push_back(v);
+        }
     }
+    void print(std::pair<const Key, Container> &i) const
+    {
+        std::cout << "pinyin: " <<  i.first << std::endl;
+        std::cout << "word:   ";
+        for (const auto &x : i.second) {
+            std::cout << "|" << x << "|";
+        }
+        std::cout << std::endl;
+    }
+    unsigned long capacity() const
+    {
+        unsigned long ret = 0;
+        //for (const auto & x: cache) {
+            //ret += 8 * 2;
+            //ret += x.first.capacity();
+            //for (const auto &word : x.second) {
+                //ret += word.capacity();
+            //}
+        //}
+        return ret;
+    }
+    unsigned long size() const { return cache.size(); }
     private:
     void serialize()
     {
@@ -74,10 +104,14 @@ class SearchTree {
 
         string tmp; stringstream ss; ss << n; ss >> tmp;
         std::ifstream f(dir + "/" + tmp + ".db");
+#ifndef NDEBUG
+        std::cout << tmp + ".db loaded" << std::endl;
+#endif
         if (!f) return;
+
         Key k; Value v;
         while (f >> k >> v) {
-            cache.insert({k, v});
+            insert(k, v);
         }
     }
 };

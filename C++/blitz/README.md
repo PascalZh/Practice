@@ -35,7 +35,3 @@ It will output `gbk.txt` file.
 1. 80-20 rule is used to load the most frequent records once initialized.
 2. Other records are loaded when needed. Maybe need some policy to load multiple records when an unloaded record is queried.
 #### implementation details
-* A record is like this:
-    ni 2032 你
-    ni'hao 4019 你好
-* 

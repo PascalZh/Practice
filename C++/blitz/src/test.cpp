@@ -48,21 +48,6 @@ vector<string> valid_pinyin = {
 "zun",  "zuo"
 };
 
-void test_single_pinyin();
-void test_ciyu();
-void test_pinyin_t();
-void test_tree();
-
-int main()
-{
-    //cout << p_start << endl;
-    
-    //test_single_pinyin();
-    //test_ciyu();
-    test_tree();
-    cin.get();
-    return 0;
-}
 
 void test_single_pinyin()
 {
@@ -86,7 +71,6 @@ void test_single_pinyin()
 	cout << "test single: "  << ms.count()
         << "ms, " << ms.count() / n / valid_pinyin.size() * 1000 << "us per time" << endl;
 
-    test_pinyin_t();
 }
 
 void test_ciyu()
@@ -99,17 +83,23 @@ void test_ciyu()
         cout << x;
     cout << endl;
 
-    test_pinyin_t();
-}
-
-void test_pinyin_t()
-{
-    cout << "pinyin_t::total_size = " << pinyin_t::total_size / 1024 << "KiB" << endl;
-    cout << "pinyin_t::total_capacity = " << pinyin_t::total_capacity / 1024 << "KiB" << endl;
-    cout << "pinyin_t::total_n = " << pinyin_t::total_n << endl;
 }
 
 void test_tree()
 {
-    SearchTree<int, int> tree("db");
+    SearchTree<pinyin_t, word_t> tree("db");
+    auto i = tree.find(pinyin_t("bai'piao"));
+    tree.print(*i);
+    cout << tree.capacity() / 1024 << "KiB"<< endl;
+}
+
+int main()
+{
+    //cout << p_start << endl;
+    
+    //test_single_pinyin();
+    //test_ciyu();
+    test_tree();
+    cin.get();
+    return 0;
 }

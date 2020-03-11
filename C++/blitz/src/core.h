@@ -18,21 +18,14 @@ class pinyin_t {
     private:
         std::string code;
     public:
-        static unsigned long long total_size;
-        static unsigned long long total_capacity;
-        static unsigned long long total_n;
+        pinyin_t() {}
         pinyin_t(pinyin_t &&s) : code(std::move(s.code)) {}
-        pinyin_t(const pinyin_t &s) : code(s.code) {
-            total_size += code.size();
-            total_capacity += code.capacity();
-            total_n++;
-        }
-        explicit pinyin_t(const std::string &s) : code(s) {
-            total_size += code.size();
-            total_capacity += code.capacity();
-            total_n++;
-        }
+        pinyin_t(const pinyin_t &s) : code(s.code) {}
+        explicit pinyin_t(const std::string &s) : code(s) {}
+
+        bool is_valid() const { return !code.empty(); }
         bool operator<(const pinyin_t & rhs) const {
+            assert(is_valid());
             const auto &c1 = this -> code;
             const auto &c2 = rhs.code;
             size_t n1 = c1.size();
@@ -49,16 +42,50 @@ class pinyin_t {
             // this says "ni" < "ni'hao"
             return n1 < n2;
         }
-        ~pinyin_t() {
-            if (!code.empty()) {
-                assert(total_size >= code.size() &&
-                        total_capacity >= code.capacity() &&
-                        total_n >= 1);
-                total_size -= code.size();
-                total_capacity -= code.capacity();
-                total_n--;
-            }
+        bool operator>(const pinyin_t &rhs) const { return rhs < *this; }
+        bool operator<=(const pinyin_t &rhs) const { return !(*this > rhs); }
+        bool operator>=(const pinyin_t &rhs) const { return !(*this < rhs); }
+        bool operator==(const pinyin_t &rhs) const { return !(*this < rhs) && !(*this > rhs); }
+
+        friend std::ostream &operator<<(std::ostream &out, const pinyin_t &py)
+        {
+            assert(py.is_valid());
+            out << py.code;
+            return out;
         }
+
+        friend std::istream &operator>>(std::istream &in, pinyin_t &py)
+        {
+            in >> py.code;
+            if (!py.is_valid()) { throw std::runtime_error("in >> pinyin: not valid input!"); }
+            return in;
+        }
+        size_t capacity() const { return code.capacity(); }
+};
+
+class word_t {
+    private:
+        unsigned int freq;
+        std::string word;
+    public:
+        word_t() :word() {}
+        word_t(const word_t &w) : freq(w.freq), word(w.word) {}
+        word_t(word_t &&w) : freq(w.freq), word(std::move(w.word)) {}
+        word_t(const unsigned int &f, const std::string &w) : freq(f), word(w) {}
+        friend std::ostream &operator<<(std::ostream &out, const word_t &w)
+        {
+            assert(w.is_valid());
+            out << w.freq << " " << w.word;
+            return out;
+        }
+        friend std::istream &operator>>(std::istream &in, word_t &w)
+        {
+            in >> w.freq >> w.word;
+            if (!w.is_valid()) { throw std::runtime_error("in >> word: not valid input!"); }
+            return in;
+        }
+        bool is_valid() const { return freq >= 0 && !word.empty(); }
+        size_t capacity() const { return sizeof(freq) + word.capacity(); }
 };
 
 struct query_record_t {
