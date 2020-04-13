@@ -16,7 +16,8 @@ WordQuerySimple::WordQuerySimple()
     for (auto& line : gbk) {
         vector<string> w;
         split(line, w, "=");
-        if (w.size() != 2) throw std::runtime_error("There are some problems with gbk.o file.");
+        if (w.size() != 2)
+            throw std::runtime_error("There are some problems with gbk.o file.");
         pinyin_t py(w[0]);
         auto it = cache.find(py);
         if(it == cache.end()) {

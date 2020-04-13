@@ -1,5 +1,5 @@
 #include "core.h"
-#include "tree.h"
+#include "lexical_node.h"
 #include <memory>
 #include <chrono>
 using std::unique_ptr; using std::cin; using std::cout; using std::endl;
@@ -87,10 +87,28 @@ void test_ciyu()
 
 void test_tree()
 {
-    SearchTree<pinyin_t, word_t> tree("db");
-    auto i = tree.find(pinyin_t("bai'piao"));
-    tree.print(*i);
-    cout << tree.capacity() / 1024 << "KiB"<< endl;
+    //SearchTree<pinyin_t, word_t> tree("db");
+    //auto i = tree.find(pinyin_t("bai'piao"));
+    //tree.print(*i);
+    //cout << tree.capacity() / 1024 << "KiB"<< endl;
+}
+
+void test_lexicon_node()
+{
+    LexiconNode l(
+            "a'a'a,啊啊啊,0\n"
+            "a'ai'er'shi'bing'bian,阿埃二氏病变,0\n"
+            "a'ai'er'shi'shou'shu,阿埃二氏手术,0\n"
+            "a'ai'er'shi'sun'hai,阿埃二氏损害,0\n"
+            "a'ai'er'shi'xi'bao,阿埃二氏细胞,0\n"
+            "a'ai'si'te'lan'de'er'shi'shou'shu,阿埃斯特兰德二氏手术,0\n"
+            "a'ba,阿坝,0\n"
+            "a'ba,阿爸,0\n"
+            "a'ba'dan,阿巴丹,0"
+            );
+    l.insert_word("a'a'a", "啊啊啊", 5);
+    auto v = l.search_pinyin("a'a'a");
+    cout << std::get<0>(v[0]) << std::get<1>(v[0]) << std::get<2>(v[0]) << endl;
 }
 
 int main()
@@ -99,7 +117,9 @@ int main()
     
     //test_single_pinyin();
     //test_ciyu();
-    test_tree();
+    //test_tree();
+    test_lexicon_node();
+
     cin.get();
     return 0;
 }

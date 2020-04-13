@@ -2,7 +2,7 @@
 so = blitz.cpython-36m-x86_64-linux-gnu.so
 CFLAGS = -std=c++11
 
-all: test
+all: test lib
 
 .PHONY: lib
 lib: $(so)
@@ -13,17 +13,20 @@ gbk.o: gbk.txt
 utils.o: utils.cpp utils.h
 	g++ $(FLAGS) -c -o $@ $<
 
-core.o: core.cpp core.h tree.h utils.h
+core.o: core.cpp core.h utils.h
 	g++ $(FLAGS) -c -o $@ $<
 
-test.o: test.cpp core.h tree.h utils.h
+test.o: test.cpp core.h utils.h
+	g++ $(FLAGS) -c -o $@ $<
+
+lexical_node.o: lexical_node.cpp lexical_node.h utils.h
 	g++ $(FLAGS) -c -o $@ $<
 
 $(so): pymodule.cpp core.cpp utils.cpp
 	g++ $(FLAGS) -shared -fPIC `python3 -m pybind11 --includes` pymodule.cpp utils.cpp core.cpp -o $(so)
 
-test: test.o core.o utils.o gbk.o
-	g++ $(FLAGS) utils.o test.o core.o gbk.o -o test
+test: test.o core.o utils.o gbk.o lexical_node.o
+	g++ $(FLAGS) utils.o test.o core.o gbk.o lexical_node.o -o test
 
 .PHONY: clean
 clean:

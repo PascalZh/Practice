@@ -29,5 +29,5 @@ foobar.*
 /ANN/bp_nn/result
 /ANN/**/*.sty
 
-/C++/blitz/src/*.txt
 /C++/blitz/src/test
+/C++/blitz/src/*.txt

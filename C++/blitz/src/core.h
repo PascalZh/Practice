@@ -19,7 +19,7 @@ class pinyin_t {
         std::string code;
     public:
         pinyin_t() {}
-        pinyin_t(pinyin_t &&s) : code(std::move(s.code)) {}
+        //pinyin_t(pinyin_t &&s) : code(std::move(s.code)) {}
         pinyin_t(const pinyin_t &s) : code(s.code) {}
         explicit pinyin_t(const std::string &s) : code(s) {}
 
