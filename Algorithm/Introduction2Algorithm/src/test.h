@@ -3,10 +3,12 @@
 #include <iostream>
 #include <vector>
 #include <array>
+#include <memory>
 #include <limits>
 #include <cstdlib>
 #include <ctime> 
-#include <chrono>
+
+#include "utils.h"
 
 namespace i2a {
 
@@ -27,7 +29,7 @@ Array<Array<Key>> test_gen_uniform(size_t len, size_t n)
     for (size_t i = 0; i < n; ++i) {
         Array<Key> a;
         for (size_t j = 0; j < len; ++j) {
-            Key x = randint(-1000, 1000);  
+            Key x = randint(-50000, 50000);  
             a.push_back(x);
         }
         ret.push_back(a);
@@ -35,19 +37,19 @@ Array<Array<Key>> test_gen_uniform(size_t len, size_t n)
     return ret;
 }
 
-class Profile {
-public:
-    Profile(string p = "", string s = "\n") : prefix(p), suffix(s) {}
-    ~Profile()
-    {
-        auto end = chrono::high_resolution_clock::now();
-        chrono::duration<double, milli> ms = end - start;
-        cout << prefix <<  ms.count() << "ms" << suffix;
+template<typename T>
+void test(T sort_func, vector<int> sizes, int times, bool print=false, bool profile=true)
+{
+    for (int i : sizes) {
+        unique_ptr<Profile> p;
+        if (profile)
+            p = print ? make_unique<Profile>("", "\n") : make_unique<Profile>();
+        for (auto& arr : test_gen_uniform(i, times)) {
+            if (print) { cout << "before:"; print_list(arr); }
+            sort_func(arr);
+            if (print) { cout << "after: "; print_list(arr); }
+        }
     }
-private:
-    chrono::time_point<chrono::high_resolution_clock> start = chrono::high_resolution_clock::now();
-    string prefix;
-    string suffix;
-};
+}
 
 } /* namespace i2a */ 
