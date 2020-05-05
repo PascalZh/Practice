@@ -1,3 +1,4 @@
+#include <functional>
 #include <vector>
 #include <iostream>
 #include <limits>
@@ -58,8 +59,8 @@ void merge(Array<Key>& A, int p, int q, int r)
         L[i] = A[p + i];
     for (int i = 0; i < n2; ++i)
         R[i] = A[q + i + 1];
-    L[n1] = numeric_limits<Key>::max();
-    R[n2] = numeric_limits<Key>::max();
+    L[n1] = std::numeric_limits<Key>::max();
+    R[n2] = std::numeric_limits<Key>::max();
     
     for (int k = p, i = 0, j = 0; k < r + 1; ++k) {
         if (L[i] < R[j]) {
@@ -95,35 +96,20 @@ void merge_insert_sort(Array<Key>& A, int k = 10)
 int main()
 {
     using namespace i2a;
+    using namespace std;
 
     Array<Key> v{11, 3, 2, 9, 22, 5};
     insert_sort_(v, 0, v.size() - 1);
     print_list(v);
 
-    // compare insert sort and merge sort
-    //for (int i : {10, 100, 1000, 10000}) {
-        //Profile p;
-        //for (auto& arr : test_gen_uniform(i, 100)) {
-            //insert_sort(arr);
-        //}
-    //}
-    for (int i : {10, 100, 1000, 10000}) {
-        Profile p;
-        for (auto& arr : test_gen_uniform(i, 100)) {
-            merge_sort(arr);
-        }
-    }
+    test(merge_sort, {10, 100, 1000, 10000, 100000}, 100);
+    test(insert_sort, {10, 100, 1000, 10000}, 100);
 
     // find best k value of merge insert sort.
     for (int k : {1, 2, 3, 4, 5, 10, 20, 30, 40, 50, 100}) {
-        cout << k << ": ";
-        for (int i : {10, 20, 30, 40, 90, 100, 1000, 10000, 20000}) {
-            Profile p("", " ");
-            for (auto& arr : test_gen_uniform(i, 100)) {
-                merge_insert_sort(arr, k);
-            }
-        }
-        cout << endl;
+        cout << "k = " << k << "\t";
+        auto fun = bind(merge_insert_sort, placeholders::_1, k);
+        test(fun, {10, 100, 1000, 10000, 100000}, 100);
     }
     // test result for k = 1 ~ 100    
     //1: 0.677977ms 1.1607ms 1.64804ms 2.78161ms 6.9275ms 7.24838ms 77.0135ms 827.238ms 1749.2ms 

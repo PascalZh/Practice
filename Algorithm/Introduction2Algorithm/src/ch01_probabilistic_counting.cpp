@@ -28,6 +28,7 @@ private:
 using namespace i2a;
 int main(int argc, char *argv[])
 {
+    using std::cout; using std::endl;
     // must call srand before use of Counter.
     srand(time(NULL));
     for (size_t k = 0; k < 100; ++k) {

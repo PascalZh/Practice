@@ -2,6 +2,7 @@
 #include <iostream>
 #include <chrono>
 #include <string>
+#include <sstream>
 
 template <class T>
 void print_list(const T& lst)
@@ -10,6 +11,20 @@ void print_list(const T& lst)
         std::cout << x << " ";
     }
     std::cout << std::endl;
+}
+
+template <class T>
+std::string show_list(const T& lst)
+{
+    std::stringstream ss;
+    std::string s;
+    std::string ret;
+    for (auto& x : lst) {
+        ss << x;
+        ss >> s;
+        ret += s + " ";
+    }
+    return ret.substr(0, ret.size() - 1);
 }
 
 class Profile {
