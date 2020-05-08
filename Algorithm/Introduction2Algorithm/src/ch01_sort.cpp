@@ -97,6 +97,7 @@ int main()
 {
     using namespace i2a;
     using namespace std;
+    srand(time(NULL));
 
     Array<Key> v{11, 3, 2, 9, 22, 5};
     insert_sort_(v, 0, v.size() - 1);

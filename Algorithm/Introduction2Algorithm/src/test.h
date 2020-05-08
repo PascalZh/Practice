@@ -35,14 +35,15 @@ Array<Array<Key>> test_gen_uniform(size_t len, size_t n)
 }
 
 template<typename T>
-void test(T sort_func, std::vector<int> sizes, int times, bool print=false, bool profile=true)
+void test(T sort_func, std::vector<int> sizes={10, 100, 1000, 10000, 100000},
+        int times=100, bool print=false, bool profile=true)
 {
     using std::cout; using std::endl;
-    srand(time(NULL));
     for (int i : sizes) {
         std::unique_ptr<Profile> p;
+        std::cout << i << ":";
         if (profile)
-            p = print ? std::make_unique<Profile>("", "\n") : std::make_unique<Profile>();
+            p = print ? std::make_unique<Profile>("", "\n") : std::make_unique<Profile>("", "\t");
         for (auto& arr : test_gen_uniform(i, times)) {
             if (print) { cout << "before:"; print_list(arr); }
             sort_func(arr);
@@ -51,5 +52,8 @@ void test(T sort_func, std::vector<int> sizes, int times, bool print=false, bool
     }
     cout << endl;
 }
+
+#define TEST(func) cout << #func << ":" << endl; \
+    test(func); cout << endl;
 
 } /* namespace i2a */ 
