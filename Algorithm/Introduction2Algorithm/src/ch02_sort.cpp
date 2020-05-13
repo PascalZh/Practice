@@ -1,4 +1,7 @@
 #include <functional>
+#include <array>
+#include <algorithm>
+#include <cassert>
 #include "test.h"
 #include "utils.h"
 
@@ -80,25 +83,26 @@ int partition(vector<int>& A, int p, int r)
     return i;
 }
 
-void quick_sort_(vector<int>& A, int p, int r)
+void quicksort_(vector<int>& A, int p, int r)
 {
     int n = r - p + 1;
     if (n > 1) {
         int q = partition(A, p, r);
-        quick_sort_(A, p, q - 1);
-        quick_sort_(A, q + 1, r);
+        quicksort_(A, p, q - 1);
+        quicksort_(A, q + 1, r);
     }
 }
 
-void quick_sort(vector<int>& A)
+void quicksort(vector<int>& A)
 {
-    quick_sort_(A, 0, A.size() - 1);
+    quicksort_(A, 0, A.size() - 1);
 }
 
-void insert_sort_(vector<int>& A, int a, int b)
+template<class T>
+void insert_sort_(T& A, int a, int b)
 {
     for (int j = a + 1; j < b + 1; ++j) {
-        Key key = A[j];
+        int key = A[j];
         int i = j - 1;
         while (i >= a && A[i] > key) {
             A[i+1] = A[i];
@@ -124,40 +128,34 @@ void quick_insert_sort(vector<int>& A, const int k)
     insert_sort_(A, 0, A.size() - 1);
 }
 
-int rand_partition(vector<int>& A, int p, int r, int k)
+template <int k>
+int rand_partition(vector<int>& A, int p, int r)
 {
-    if (r - p + 1 > 10) {
-        vector<int> ind;
+    if (r - p + 1 > 10 * k) {
+        int ind[k];
         for (int i = 0; i < k; ++i)
-            ind.push_back(randint(p, r));
-        insert_sort_(ind, 0, ind.size() - 1);
+            ind[i] = randint(p, r);
+        insert_sort_(ind, 0, k - 1);
         exchange(&A[r], &A[ind[k / 2]]);
     }
-    int x = A[r];
-    int i = p;
-    for (int m = p; m < r; ++m) {
-        if (A[m] < x) {
-            exchange(&A[m], &A[i]);
-            ++i;
-        }
-    }
-    exchange(&A[r], &A[i]);
-    return i;
+    return partition(A, p, r);
 }
 
-int rand_quicksort_(vector<int>& A, int p, int r, int k)
+template <int k>
+int rand_quicksort_(vector<int>& A, int p, int r)
 {
     int n = r - p + 1;
     if (n > 1) {
-        int q  = rand_partition(A, p, r, k);
-        rand_quicksort_(A, p, q - 1, k);
-        rand_quicksort_(A, q + 1, r, k);
+        int q  = rand_partition<k>(A, p, r);
+        rand_quicksort_<k>(A, p, q - 1);
+        rand_quicksort_<k>(A, q + 1, r);
     }
 }
 
-int rand_quicksort(vector<int>& A, int k)
+template <int k>
+int rand_quicksort(vector<int>& A)
 {
-    rand_quicksort_(A, 0, A.size() - 1, k);
+    rand_quicksort_<k>(A, 0, A.size() - 1);
 }
 
 int hoare_partition(vector<int>& A, int p, int r)
@@ -188,6 +186,115 @@ int hoare_quicksort(vector<int>& A)
     hoare_quicksort_(A, 0, A.size() - 1);
 }
 
+auto partition_1(vector<int>& A, int p, int r)
+{
+    int x = A[r];
+    int i = p;
+    for (int k = p; k < r; ++k) {
+        if (A[k] < x) {
+            exchange(&A[k], &A[i]);
+            ++i;
+        }
+    }
+    int q = i;
+    for (int k = q; k < r; ++k) {
+        if (A[k] == x) {
+            exchange(&A[k], &A[i]);
+            ++i;
+        }
+    }
+    exchange(&A[r], &A[i]);
+    return make_tuple(q, i);
+}
+
+void quicksort_1_(vector<int>& A, int p, int r)
+{
+    int n = r - p + 1;
+    if (n > 1) {
+        auto[q, t] = partition_1(A, p, r);
+        quicksort_1_(A, p, q - 1);
+        quicksort_1_(A, t + 1, r);
+    }
+}
+
+void quicksort_1(vector<int>& A)
+{
+    quicksort_1_(A, 0, A.size() - 1);
+}
+
+// sorting in linear time
+void counting_sort(vector<int>& A, vector<int>& B, int k)
+{
+    vector<int> C(k + 1);
+    for (int j = 0; j < A.size(); ++j)
+        C[A[j]] = C[A[j]] + 1;
+    for (int i = 0; i < k + 1; ++i)
+        C[i] += C[i - 1];
+    for (int j = A.size() - 1; j >= 0; --j) {
+        B[C[A[j]]] = A[j];
+        C[A[j]] = C[A[j]] - 1;
+    }
+}
+
+// medians and order statistics
+void do_nothing() { for (int i = 0; i < 500; ++i) ; }
+
+bool gt(int a, int b) { do_nothing(); return a > b; }
+
+bool lt(int a, int b) { do_nothing(); return a < b; }
+
+auto min_max(vector<int>& A)
+{
+    int min = A[0];
+    int max = A[0];
+    for (int i = 1; i < A.size(); ++i) {
+        if (gt(min, A[i])) {
+            min = A[i];
+        }
+        if (lt(max, A[i])) {
+            max = A[i];
+        }
+    }
+    assert(all_of(A.cbegin(), A.cend(), [max](int x) { return x <= max; }));
+    assert(all_of(A.cbegin(), A.cend(), [min](int x) { return x >= min; }));
+    return make_tuple(min, max);
+}
+
+// This function only performs 1.5*n comparisons, while `min_max` performs 2*n
+// comparisons. However, `min_max_` is not faster than `min_max` due to some
+// implementation reasons. So, to show the difference, we change <, > to
+// `lt`, `gt`, and run `do_nothing` in both comparison function.
+auto min_max_(vector<int>& A)
+{
+    int min, max, offset;
+    if (A.size() % 2 == 1) {
+        min = max = A[0];
+        offset = 1;
+    } else {
+        offset = 0;
+        min = A[0] < A[1] ? A[0] : A[1];
+        max = A[0] < A[1] ? A[1] : A[0];
+    }
+    for (int i = 0; i < (A.size() - offset) / 2; ++i) {
+        int a1 = A[offset + 2 * i];
+        int a2 = A[offset + 2 * i + 1];
+        if (lt(a1, a2)) {
+            if (gt(min, a1))
+                min = a1;
+            if (lt(max, a2))
+                max = a2;
+        } else {
+            if (gt(min, a2))
+                min = a2;
+            if (lt(max, a1))
+                max = a1;
+        }
+    }
+    assert(all_of(A.cbegin(), A.cend(), [max](int x) { return x <= max; }));
+    assert(all_of(A.cbegin(), A.cend(), [min](int x) { return x >= min; }));
+    return make_tuple(min, max);
+}
+
 } /* namespace i2a */
 
 int main(int argc, char *argv[])
@@ -196,30 +303,61 @@ int main(int argc, char *argv[])
     namespace ph = placeholders;
     srand(time(NULL));
 
+    TEST(min_max);
+    TEST(min_max_);
+
     vector<int> A = {3, 2, 1, 7, 8, 9, 5, 4, 4};
-    hoare_quicksort(A);
+    quicksort_1(A);
     print_list(A);
 
     TEST(heap_sort);
 
-    TEST(quick_sort);
+    TEST(quicksort);
+
+    cout << "quicksort(all values are equal):" << endl;
+    for (int i : {10, 100, 1000, 2000}) {
+        unique_ptr<Profile> p = make_unique<Profile>("", "\t");
+        cout << i << ":";
+        for (int j = 0; j < 100; ++j) {
+            vector<int> arr(i, 7);
+            quicksort(arr);
+        }
+    } cout << endl << endl;
+
+    TEST(quicksort_1);
+
+    cout << "quicksort_1(all values are equal):" << endl;
+    for (int i : {10, 100, 1000, 10000, 100000}) {
+        unique_ptr<Profile> p = make_unique<Profile>("", "\t");
+        cout << i << ":";
+        for (int j = 0; j < 100; ++j) {
+            vector<int> arr(i, 7);
+            quicksort_1(arr);
+        }
+    } cout << endl << endl;
 
     TEST(hoare_quicksort);
 
-    cout << "rand_quick_sort(k = 3):" << endl;
-    test(bind(rand_quicksort, ph::_1, 3));
-    cout << endl;
+    TEST(rand_quicksort<1>);
 
-    cout << "rand_quick_sort(k = 1):" << endl;
-    test(bind(rand_quicksort, ph::_1, 1));
-    cout << endl;
+    TEST(rand_quicksort<3>);
 
+    TEST(rand_quicksort<5>);
+
+    TEST(rand_quicksort<7>);
 
     cout << "quick_insert_sort:" << endl;
     for (int k : {1, 2, 3, 4, 5, 10, 20, 30, 50, 100}) {
         cout << "k = " << k << "\t";
         auto fun = bind(quick_insert_sort, placeholders::_1, k);
-        test(fun, {10, 100, 1000, 10000, 100000}, 100);
-    }
+        TestConfig cfg;
+        cfg.times = 20;
+        test(fun, cfg);
+    } cout << endl;
+
+    vector<int> B(A.size());
+    counting_sort(A, B, 9);
+    print_list(A);
+
     return 0;
 }

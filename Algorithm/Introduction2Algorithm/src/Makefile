@@ -1,4 +1,4 @@
-CFLAGS = -std=c++17 -O2
+CFLAGS = -std=c++17
 
 all: ch01_sort.out ch01_probabilistic_counting.out ch02_sort.out
 
