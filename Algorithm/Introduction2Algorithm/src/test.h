@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <functional>
 #include <ctime> 
+#include <cassert>
 
 #include "utils.h"
 
@@ -21,23 +22,39 @@ int randint(int a, int b)
     return (std::rand() % (b - a + 1)) + a;
 }
 
-Array<Array<Key>> test_gen_uniform(size_t len, size_t n)
+Array<Array<Key>> test_gen_uniform(size_t len, size_t n, int a, int b)
 {
     Array<Array<Key>> ret;
     for (size_t i = 0; i < n; ++i) {
-        Array<Key> a;
+        Array<Key> tmp;
         for (size_t j = 0; j < len; ++j) {
-            Key x = randint(-50000, 50000);  
-            a.push_back(x);
+            Key x = randint(a, b);  
+            tmp.push_back(x);
         }
-        ret.push_back(a);
+        ret.push_back(tmp);
+    }
+    return ret;
+}
+
+Array<Array<Key>> test_gen_equal(size_t len, size_t n, int x)
+{
+    Array<Array<Key>> ret;
+    for (size_t i = 0; i < n; ++i) {
+        Array<Key> tmp(len, x);
+        assert(tmp.size() == len);
+        ret.push_back(tmp);
     }
     return ret;
 }
 
 struct TestConfig {
-    std::function<Array<Array<int>> (size_t, size_t)> gen = test_gen_uniform;
-    std::vector<int> sizes = {10, 100, 1000, 10000, 20000};
+    std::function<Array<Array<int>> (size_t, size_t)> gen =
+        std::bind(test_gen_uniform,
+                std::placeholders::_1,
+                std::placeholders::_2,
+                -100,
+                100);
+    std::vector<int> sizes = {10, 100, 1000, 10000};
     int times = 100;
     bool print = false;
     bool profile = true;
@@ -66,5 +83,8 @@ void test(T sort_func, TestConfig cfg = TestConfig())
 
 #define TEST(func) cout << #func << ":" << endl; \
     test(func); cout << endl;
+
+#define TEST_(func, cfg, msg) cout << #func <<msg<< ":" << endl; \
+    test(func, cfg); cout << endl;
 
 } /* namespace i2a */ 

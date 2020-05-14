@@ -16,20 +16,11 @@ inline void exchange(int* x, int* y)
     *x = *x - *y;
 }
 
-inline int parent(int i)
-{
-    return (i + 1) / 2 - 1;
-}
+inline int parent(int i) { return (i + 1) / 2 - 1; }
 
-inline int left(int i)
-{
-    return 2 * i + 1;
-}
+inline int left(int i) { return 2 * i + 1; }
 
-inline int right(int i)
-{
-    return 2 * i + 2;
-}
+inline int right(int i) { return 2 * i + 2; }
 
 void max_heapify(vector<int>& A, int heap_size, int p)
 {
@@ -93,10 +84,7 @@ void quicksort_(vector<int>& A, int p, int r)
     }
 }
 
-void quicksort(vector<int>& A)
-{
-    quicksort_(A, 0, A.size() - 1);
-}
+void quicksort(vector<int>& A) { quicksort_(A, 0, A.size() - 1); }
 
 template<class T>
 void insert_sort_(T& A, int a, int b)
@@ -128,10 +116,10 @@ void quick_insert_sort(vector<int>& A, const int k)
     insert_sort_(A, 0, A.size() - 1);
 }
 
-template <int k>
+template <int k = 1>
 int rand_partition(vector<int>& A, int p, int r)
 {
-    if (r - p + 1 > 10 * k) {
+    if (r - p + 1 > k) {
         int ind[k];
         for (int i = 0; i < k; ++i)
             ind[i] = randint(p, r);
@@ -152,11 +140,7 @@ int rand_quicksort_(vector<int>& A, int p, int r)
     }
 }
 
-template <int k>
-int rand_quicksort(vector<int>& A)
-{
-    rand_quicksort_<k>(A, 0, A.size() - 1);
-}
+template <int k> int rand_quicksort(vector<int>& A) { rand_quicksort_<k>(A, 0, A.size() - 1); }
 
 int hoare_partition(vector<int>& A, int p, int r)
 {
@@ -181,10 +165,7 @@ int hoare_quicksort_(vector<int>& A, int p, int r)
     }
 }
 
-int hoare_quicksort(vector<int>& A)
-{
-    hoare_quicksort_(A, 0, A.size() - 1);
-}
+int hoare_quicksort(vector<int>& A) { hoare_quicksort_(A, 0, A.size() - 1); }
 
 auto partition_1(vector<int>& A, int p, int r)
 {
@@ -217,10 +198,7 @@ void quicksort_1_(vector<int>& A, int p, int r)
     }
 }
 
-void quicksort_1(vector<int>& A)
-{
-    quicksort_1_(A, 0, A.size() - 1);
-}
+void quicksort_1(vector<int>& A) { quicksort_1_(A, 0, A.size() - 1); }
 
 // sorting in linear time
 void counting_sort(vector<int>& A, vector<int>& B, int k)
@@ -266,6 +244,7 @@ auto min_max(vector<int>& A)
 // `lt`, `gt`, and run `do_nothing` in both comparison function.
 auto min_max_(vector<int>& A)
 {
+    assert(A.size() > 0);
     int min, max, offset;
     if (A.size() % 2 == 1) {
         min = max = A[0];
@@ -295,16 +274,29 @@ auto min_max_(vector<int>& A)
     return make_tuple(min, max);
 }
 
+int rand_select_(vector<int>& A, int p, int r, int i)
+{
+    if (p == r)
+        return A[p];
+    int q = rand_partition(A, p, r);
+    int k = q - p + 1;
+    if (i == k)
+        return A[q];
+    else if (i < k)
+        return rand_select_(A, p, q - 1, i);
+    else
+        return rand_select_(A, q + 1, r, i - k);
+}
+
+int rand_select(vector<int>& A, int i) { return rand_select_(A, 0, A.size() - 1, i); }
+
 } /* namespace i2a */
 
 int main(int argc, char *argv[])
 {
     using namespace i2a;
-    namespace ph = placeholders;
+    using placeholders::_1, placeholders::_2, placeholders::_3;
     srand(time(NULL));
-
-    TEST(min_max);
-    TEST(min_max_);
 
     vector<int> A = {3, 2, 1, 7, 8, 9, 5, 4, 4};
     quicksort_1(A);
@@ -314,42 +306,26 @@ int main(int argc, char *argv[])
 
     TEST(quicksort);
 
-    cout << "quicksort(all values are equal):" << endl;
-    for (int i : {10, 100, 1000, 2000}) {
-        unique_ptr<Profile> p = make_unique<Profile>("", "\t");
-        cout << i << ":";
-        for (int j = 0; j < 100; ++j) {
-            vector<int> arr(i, 7);
-            quicksort(arr);
-        }
-    } cout << endl << endl;
-
     TEST(quicksort_1);
 
-    cout << "quicksort_1(all values are equal):" << endl;
-    for (int i : {10, 100, 1000, 10000, 100000}) {
-        unique_ptr<Profile> p = make_unique<Profile>("", "\t");
-        cout << i << ":";
-        for (int j = 0; j < 100; ++j) {
-            vector<int> arr(i, 7);
-            quicksort_1(arr);
-        }
-    } cout << endl << endl;
+    TestConfig cfg;
+    cfg.gen = bind(test_gen_equal, _1, _2, 7);
+    cfg.sizes = {10, 100, 1000};
+    TEST_(quicksort, cfg, "(all values are equal)");
+    cfg.sizes = {10, 100, 1000, 10000};
+    TEST_(quicksort_1, cfg, "(all values are equal)");
 
     TEST(hoare_quicksort);
 
     TEST(rand_quicksort<1>);
-
     TEST(rand_quicksort<3>);
-
     TEST(rand_quicksort<5>);
-
     TEST(rand_quicksort<7>);
 
     cout << "quick_insert_sort:" << endl;
     for (int k : {1, 2, 3, 4, 5, 10, 20, 30, 50, 100}) {
         cout << "k = " << k << "\t";
-        auto fun = bind(quick_insert_sort, placeholders::_1, k);
+        auto fun = bind(quick_insert_sort, _1, k);
         TestConfig cfg;
         cfg.times = 20;
         test(fun, cfg);
@@ -357,7 +333,18 @@ int main(int argc, char *argv[])
 
     vector<int> B(A.size());
     counting_sort(A, B, 9);
-    print_list(A);
+    cout << "counting_sort:" << endl; print_list(A); cout << endl;
+
+    TEST(min_max);
+    TEST(min_max_);
+
+    cout << "rand_select:" << endl;
+    for (auto& arr : test_gen_uniform(10, 2, 0, 30)) {
+        print_list(arr);
+        cout << "1st  smallest:" << rand_select(arr, 1) << endl;
+        cout << "10th smallest:" << rand_select(arr, 10) << endl;
+        cout << "2nd  smallest:" << rand_select(arr, 2) << endl;
+    } cout << endl;
 
     return 0;
 }
