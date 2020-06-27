@@ -1,9 +1,12 @@
-#include "core.h"
-#include "lexical_node.h"
 #include <memory>
 #include <chrono>
+#include <sstream>
+#include "core.h"
+//#include "lexical_node.h"
+#include "lexicon.h"
+#include "coder.h"
 using std::unique_ptr; using std::cin; using std::cout; using std::endl;
-using std::vector; using std::string;
+using std::vector; using std::string; using std::stringstream;
 namespace chrono = std::chrono;
 
 vector<string> valid_pinyin = {
@@ -93,22 +96,27 @@ void test_tree()
     //cout << tree.capacity() / 1024 << "KiB"<< endl;
 }
 
-void test_lexicon_node()
+void test_lexicon()
 {
-    LexiconNode l(
-            "a'a'a,啊啊啊,0\n"
-            "a'ai'er'shi'bing'bian,阿埃二氏病变,0\n"
-            "a'ai'er'shi'shou'shu,阿埃二氏手术,0\n"
-            "a'ai'er'shi'sun'hai,阿埃二氏损害,0\n"
-            "a'ai'er'shi'xi'bao,阿埃二氏细胞,0\n"
-            "a'ai'si'te'lan'de'er'shi'shou'shu,阿埃斯特兰德二氏手术,0\n"
-            "a'ba,阿坝,0\n"
-            "a'ba,阿爸,0\n"
-            "a'ba'dan,阿巴丹,0"
-            );
-    l.insert_word("a'a'a", "啊啊啊", 5);
-    auto v = l.search_pinyin("a'a'a");
-    cout << std::get<0>(v[0]) << std::get<1>(v[0]) << std::get<2>(v[0]) << endl;
+    blitz::Entry e;
+    stringstream ss("a'a'a 啊啊啊 0\nwjeiowojie wjeowj 232 \n");
+    ss >> e;
+    cout << bool(ss) << " " << e << endl;
+    ss >> e;
+    cout << bool(ss) << " " << e << endl;
+    ss >> e;
+    cout << bool(ss) << " " << e << endl;
+    //LexiconMMU l();
+    //l.insert_word("a'a'a", "啊啊啊", 1);
+    //auto v = l.search_pinyin("a'a'a");
+    //cout << v[0] << endl;
+}
+
+void test_coder()
+{
+    string s = "efjwoppcopzjoifpewhqofpewpppppppppppppp";
+    cout << s << endl;
+    blitz::HuffmanCoder c(s);
 }
 
 int main()
@@ -118,7 +126,9 @@ int main()
     //test_single_pinyin();
     //test_ciyu();
     //test_tree();
-    test_lexicon_node();
+    //test_lexicon_node();
+    test_lexicon();
+    test_coder();
 
     cin.get();
     return 0;
