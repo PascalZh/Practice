@@ -2,9 +2,9 @@
 #include <chrono>
 #include <sstream>
 #include "core.h"
-//#include "lexical_node.h"
 #include "lexicon.h"
 #include "coder.h"
+#include "utils.h"
 using std::unique_ptr; using std::cin; using std::cout; using std::endl;
 using std::vector; using std::string; using std::stringstream;
 namespace chrono = std::chrono;
@@ -130,6 +130,6 @@ int main()
     test_lexicon();
     test_coder();
 
-    cin.get();
+    //cin.get();
     return 0;
 }

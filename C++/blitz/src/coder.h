@@ -2,6 +2,8 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <functional>
+#include "utils.h"
 
 namespace blitz
 {
@@ -26,33 +28,48 @@ public:
             auto it = find_if(vec.begin(), vec.end(),
                     [ch](Tree& t) { return t.ch == ch; });
             if (it == vec.end()) {
-                vec.push_back(Tree{1, ch});
+                Tree t;
+                t.freq = 1;
+                t.ch = ch;
+                vec.push_back(t);
             } else {
                 it -> freq += 1;
             }
         }
-        _queue = priority_queue<Tree, vector<Tree>, greater<Tree>>(greater<Tree>(), vec);
-        //while(!_queue.empty()) {
-            //auto p = _queue.top();
-            //cout << p.freq << " " << p.ch << endl;
-            //_queue.pop();
-        //}
+
+        priority_queue<Tree, vector<Tree>, greater<Tree>> _queue(greater<Tree>(), vec);
 
         // update the queue by repeatedly joining two trees.
-        vector<Tree> cont; // container for children of trees.
         while(_queue.size() > 1) {
-            cont.push_back(_queue.top());
-            Tree* tree1 = &cont.back();
+            Tree* tree1 = new Tree(_queue.top());
             _queue.pop();
 
-            cont.push_back(_queue.top());
-            Tree* tree2 = &cont.back();
+            Tree* tree2 = new Tree(_queue.top());
             _queue.pop();
 
-            Tree new_tree = {tree1 -> freq + tree2 -> freq, 0, tree1, tree2};
-            cout << new_tree << endl;
+            Tree new_tree;
+            new_tree.freq = tree1->freq + tree2->freq;
+            new_tree.left = tree1;
+            new_tree.right = tree2;
             _queue.push(new_tree);
         }
+
+        function<void(Tree&)> generate_code = [&generate_code](Tree& t)
+        {
+            cout << t << endl;
+            if (t.left) {
+                t.left->code = t.code + "0";
+                generate_code(*t.left);
+            }
+            if (t.right) {
+                t.right->code = t.code + "1";
+                generate_code(*t.right);
+            }
+        };
+        auto top = _queue.top();
+        top.code = "";
+        generate_code(top);
+
     }
 
     virtual string encode(const string& str) { return string("fjeiw"); }
@@ -61,13 +78,18 @@ public:
 private:
     struct Tree {
         int freq = 0;
-        char ch = 0;
+        char ch = ' ';
+        string code;
         Tree* left = nullptr;
         Tree* right = nullptr;
         friend bool operator>(const Tree& lhs, const Tree& rhs) { return lhs.freq > rhs.freq; }
-        friend ostream& operator<<(ostream& out, const Tree& t) { out << t.freq << " " << int(t.ch) << " " << long(t.left) << " " << long(t.right);}
+        friend ostream& operator<<(ostream& out, const Tree& t)
+        {
+            out << t.freq << "\t" << t.ch << "\t" << t.code << "\t\t"
+                << long(t.left) << " " << long(t.right);
+            return out;
+        }
     };
-    priority_queue<Tree, vector<Tree>, greater<Tree>> _queue;
 };
 
 } /* blitz */ 
