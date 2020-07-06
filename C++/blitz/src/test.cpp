@@ -115,8 +115,19 @@ void test_lexicon()
 void test_coder()
 {
     string s = "efjwoppcopzjoifpewhqofpewpppppppppppppp";
-    cout << s << endl;
+    for (int i = 0; i < 10; ++i) s += s;
     blitz::HuffmanCoder c(s);
+    auto m = c.encode(s);
+
+    //cout << "original string:         " << s << endl;
+    //cout << "after encode and decode: " << c.decode(m) << endl;
+    //cout << "encoded data:            ";
+    //for (auto& d : m) {
+        //cout << to_binary(d) << "'";
+    //} cout << endl;
+    cout << "memory usage of string:       " << s.size() << endl;
+    cout << "memory usage of encoded data: " << sizeof(uint32_t) * m.size() << endl;
+    cout << "rate:                         " << sizeof(uint32_t) * m.size() / float(s.size()) << endl;
 }
 
 int main()

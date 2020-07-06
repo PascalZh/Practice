@@ -13,4 +13,13 @@ int str2int(const std::string& s);
 
 std::string int2str(int i);
 
-std::string to_binary(unsigned int x);
+template <class T>
+std::string to_binary(T x)
+{
+    constexpr size_t bit_width = sizeof(T) * 8;
+    std::string ret(bit_width, '0');
+    for (int i = 0; i < bit_width; ++i) {
+        ret[bit_width - i - 1] = ((x & (1 << i)) >> i) == 0 ? '0' : '1';
+    }
+    return ret;
+}

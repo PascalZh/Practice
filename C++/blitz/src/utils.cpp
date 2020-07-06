@@ -45,14 +45,3 @@ std::string join(std::vector<std::string> v, const std::string& delimiters=" ")
     }
     return ret;
 }
-
-std::string to_binary(unsigned int x)
-{
-    if (x == 0) return string("0");
-    std::string ret;
-    for (;x != 0; x >>= 1) {
-        std::string bit = (x & 1) == 1 ? "1" : "0";
-        ret = bit + ret;
-    }
-    return ret;
-}
