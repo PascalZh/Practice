@@ -1,7 +1,6 @@
 #include <memory>
 #include <chrono>
 #include <sstream>
-#include "core.h"
 #include "lexicon.h"
 #include "coder.h"
 #include "utils.h"
@@ -51,95 +50,49 @@ vector<string> valid_pinyin = {
 "zun",  "zuo"
 };
 
-
-void test_single_pinyin()
-{
-    
-    WordQuerySimple w;
-    w.query("ni", 10);
-    const query_record_t * q = w.get_last_query();
-    cout << q -> pinyin << endl;
-    for (auto& x: q -> candidates)
-        cout << x;
-    cout << endl;
-
-    size_t n = 1000;
-    auto t1 = std::chrono::high_resolution_clock::now();
-    for (size_t i=0;i<n;i++)
-        for (size_t j=0;j<valid_pinyin.size();j++) {
-            w.query(valid_pinyin[j], 20);
-        }
-    auto t2 = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> ms = t2 - t1;
-	cout << "test single: "  << ms.count()
-        << "ms, " << ms.count() / n / valid_pinyin.size() * 1000 << "us per time" << endl;
-
-}
-
-void test_ciyu()
-{
-    WordQuerySimple w;
-    w.query("ni'hao", 10);
-    const query_record_t * q = w.get_last_query();
-    cout << q -> pinyin << endl;
-    for (auto& x: q -> candidates)
-        cout << x;
-    cout << endl;
-
-}
-
-void test_tree()
-{
-    //SearchTree<pinyin_t, word_t> tree("db");
-    //auto i = tree.find(pinyin_t("bai'piao"));
-    //tree.print(*i);
-    //cout << tree.capacity() / 1024 << "KiB"<< endl;
-}
-
 void test_lexicon()
 {
     blitz::Entry e;
-    stringstream ss("a'a'a 啊啊啊 0\nwjeiowojie wjeowj 232 \n");
+    stringstream ss;
+    ss << "a'a'a|啊啊啊|0\nwjeiowojie|wjeowj|232\n";
     ss >> e;
     cout << bool(ss) << " " << e << endl;
     ss >> e;
     cout << bool(ss) << " " << e << endl;
     ss >> e;
     cout << bool(ss) << " " << e << endl;
-    //LexiconMMU l();
-    //l.insert_word("a'a'a", "啊啊啊", 1);
-    //auto v = l.search_pinyin("a'a'a");
-    //cout << v[0] << endl;
+
+    blitz::LexiconMMU l;
+    l.insert_word("a'a'a", "啊啊啊", 1);
+    auto v = l.search_pinyin("a'a'a");
+    cout << "v.empty()? " << v.empty() << endl;
+    cout << "v:" << endl;
+    for (auto& x : v)
+        cout << x << endl;
 }
 
 void test_coder()
 {
-    string s = "efjwoppcopzjoifpewhqofpewpppppppppppppp";
-    for (int i = 0; i < 10; ++i) s += s;
+    string s = "啊啊啊啊啊啊啊啊啊啊 啊wejowfjoiejfiowf";
+    //for (int i = 0; i < 10; ++i) s += s;
     blitz::HuffmanCoder c(s);
     auto m = c.encode(s);
 
-    //cout << "original string:         " << s << endl;
-    //cout << "after encode and decode: " << c.decode(m) << endl;
-    //cout << "encoded data:            ";
-    //for (auto& d : m) {
-        //cout << to_binary(d) << "'";
-    //} cout << endl;
+    cout << "original string:         " << s << endl;
+    cout << "encoded data:            " << m << endl;
+    cout << "after encode and decode: " << c.decode(m) << endl;
     cout << "memory usage of string:       " << s.size() << endl;
-    cout << "memory usage of encoded data: " << sizeof(uint32_t) * m.size() << endl;
-    cout << "rate:                         " << sizeof(uint32_t) * m.size() / float(s.size()) << endl;
+    cout << "memory usage of encoded data: " << m.size() << endl;
+    cout << "rate:                         " << m.size() / float(s.size()) << endl;
 }
 
 int main()
 {
-    //cout << p_start << endl;
-    
-    //test_single_pinyin();
-    //test_ciyu();
-    //test_tree();
-    //test_lexicon_node();
     test_lexicon();
-    test_coder();
+    //test_coder();
+    std::map<string, int> m;
+    for (auto& [a, b] : m)
+        cout << a << endl;
 
     //cin.get();
     return 0;

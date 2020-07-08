@@ -3,6 +3,7 @@
 #include <vector>
 #include <sstream>
 #include <iostream>
+#include <exception>
 
 void split(const std::string& s, std::vector<std::string>& tokens, const std::string& delimiters);
 std::vector<std::string> split(const std::string& s, const std::string& delimiters);
@@ -22,4 +23,14 @@ std::string to_binary(T x)
         ret[bit_width - i - 1] = ((x & (1 << i)) >> i) == 0 ? '0' : '1';
     }
     return ret;
+}
+
+template<typename Target, typename Source>
+Target lexical_cast(const Source& arg)
+{
+    Target result;
+    std::stringstream interpreter;
+    if (!(interpreter << arg and interpreter >> result))
+        throw std::runtime_error("my_bad_cast");
+    return result;
 }

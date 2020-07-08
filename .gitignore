@@ -3,6 +3,7 @@ __pycache__/
 compiled/
 db/
 tmp/
+.xmake/
 
 *.exe
 *.out
