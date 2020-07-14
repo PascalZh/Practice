@@ -14,8 +14,16 @@ using namespace std;
 class Coder
 {
 public:
-    virtual string encode(const string& str) = 0;
-    virtual string decode(const string& data) = 0;
+    virtual string encode(const string& str) const = 0;
+    virtual string decode(const string& data) const = 0;
+};
+
+class IdentityCoder : public Coder
+{
+public:
+    IdentityCoder(const string& text) {};
+    string encode(const string& str) const { return str; }
+    string decode(const string& str) const { return str; }
 };
 
 class HuffmanCoder : public Coder
@@ -29,8 +37,8 @@ public:
         if (m_root.right) delete_tree(m_root.right);
     }
 
-    virtual string encode(const string& str);
-    virtual string decode(const string& data_);
+    string encode(const string& str) const;
+    string decode(const string& data_) const;
 
 private:
     struct Tree {
@@ -56,7 +64,7 @@ private:
 
     Tree m_root; // could be used to decode the data.
     map<char, Code> m_dict; // could be used to encode the string.
-    size_t m_padding;
+    mutable size_t m_padding;
 
     void generate_code(Tree& t);
 

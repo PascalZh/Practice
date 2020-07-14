@@ -40,8 +40,7 @@ std::string join(std::vector<std::string> v, const std::string& delimiters=" ")
 {
     if (v.size() < 1) {return "";}
     std::string ret(v[0]);
-    for (auto it = ++v.begin(); it != v.end(); ++it) {
+    for (auto it = ++v.begin(); it != v.end(); ++it)
         ret += delimiters + *it;
-    }
     return ret;
 }

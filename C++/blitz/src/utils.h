@@ -25,12 +25,25 @@ std::string to_binary(T x)
     return ret;
 }
 
-template<typename Target, typename Source>
-Target lexical_cast(const Source& arg)
+template<class Target, class Source>
+typename std::enable_if<not std::is_same<Target, std::string>::value, Target>::type
+lexical_cast(const Source& arg)
 {
     Target result;
     std::stringstream interpreter;
-    if (!(interpreter << arg and interpreter >> result))
-        throw std::runtime_error("my_bad_cast");
+    if (!(interpreter << arg && interpreter >> result))
+        throw std::runtime_error("bad_cast");
+
     return result;
+}
+
+template<class Target, class Source>
+typename std::enable_if<std::is_same<Target, std::string>::value, Target>::type
+lexical_cast(const Source& arg)
+{
+    std::stringstream interpreter;
+    if (!(interpreter << arg))
+        throw std::runtime_error("bad_cast");
+
+    return interpreter.str();
 }

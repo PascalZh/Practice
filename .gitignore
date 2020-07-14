@@ -31,4 +31,4 @@ foobar.*
 /ANN/**/*.sty
 
 /C++/blitz/src/test
-/C++/blitz/src/*.txt
+/C++/blitz/**/*.txt

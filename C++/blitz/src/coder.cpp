@@ -43,7 +43,7 @@ void HuffmanCoder::delete_tree(Tree* t)
     if (left) delete_tree(left);
 }
 
-string HuffmanCoder::encode(const string& str)
+string HuffmanCoder::encode(const string& str) const
 {
     constexpr size_t bit_width = sizeof(data_type) * 8;
     vector<data_type> output;
@@ -74,13 +74,13 @@ string HuffmanCoder::encode(const string& str)
     return output_;
 }
 
-string HuffmanCoder::decode(const string& data_)
+string HuffmanCoder::decode(const string& data_) const
 {
     constexpr size_t bit_width = sizeof(data_type) * 8;
     string output;
     vector<data_type> data(reinterpret_cast<const data_type*>(data_.data()),
             reinterpret_cast<const data_type*>(data_.data() + data_.size()));
-    Tree* current = &m_root;
+    const Tree* current = &m_root;
     for (int i = 0; i < data.size(); ++i) {
         int n_bits = i == data.size() - 1 ? bit_width - m_padding : bit_width;
         for (int j = 0; j < n_bits; ++j) {
@@ -98,7 +98,6 @@ string HuffmanCoder::decode(const string& data_)
 
 void HuffmanCoder::generate_code(Tree& t)
 {
-    cout << t << endl;
     if (t.left) {
         t.left -> code   = t.code << 1;
         t.left -> length = t.length + 1;
