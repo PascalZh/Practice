@@ -13,25 +13,42 @@ vector<string> valid_pinyin = { "a", "ai", "an", "ang", "ao", "ba", "bai", "ban"
 
 void test_lexicon()
 {
-    blitz::Record e;
-    stringstream ss;
-    ss << "a'a'a 啊啊啊 0\nwjeiowojie wjeowj 232\n";
-    ss >> e;
-    cout << bool(ss) << " " << e << endl;
-    ss >> e;
-    cout << bool(ss) << " " << e << endl;
-    ss >> e;
-    cout << bool(ss) << " " << e << endl;
-    auto vec = lexical_cast<vector<blitz::Record>>("a'a'a 啊啊啊 0\nwjeiowojie wjeowj 232\n");
-    cout << "{" <<  lexical_cast<string>(vec) << "}" << endl;
+    //blitz::Record e;
+    //stringstream ss;
+    //ss << "a'a'a 啊啊啊 0\nwjeiowojie wjeowj 232\n";
+    //ss >> e;
+    //cout << bool(ss) << " " << e << endl;
+    //ss >> e;
+    //cout << bool(ss) << " " << e << endl;
+    //ss >> e;
+    //cout << bool(ss) << " " << e << endl;
+    //auto vec = lexical_cast<vector<blitz::Record>>("a'a'a 啊啊啊 0\nwjeiowojie wjeowj 232\n");
+    //cout << "{" <<  lexical_cast<string>(vec) << "}" << endl;
 
-    blitz::LexiconMMU l;
-    l.insert("a'a'a", "啊啊啊", 1);
-    auto v = l.find_all("a'a'a");
-    cout << "v.empty()? " << v.empty() << endl;
-    cout << "v:" << endl;
-    for (auto& x : v)
-        cout << x << endl;
+    //blitz::LexiconMMU l;
+    //l.insert("a'a'a", "啊啊啊", 1);
+    //auto v = l.find_all("a'a'a");
+    //cout << "v.empty()? " << v.empty() << endl;
+    //cout << "v:" << endl;
+    //for (auto& x : v)
+        //cout << x << endl;
+    {
+        TimeIt it("use init_lexicon");
+        blitz::LexiconMMU lexicon;
+        blitz::DataLoader dataloader;
+        lexicon.init_lexicon(dataloader.read_data());
+        //lexicon.show_map_node();
+    }
+    {
+        TimeIt it("use insert")
+        auto vec = dataloader.read_records();
+        for (int i = 0; i < vec.size(); ++i) {
+            lexicon.insert(vec[i]);
+        }
+    }
+
+    TimeIt::show();
+
 }
 
 void test_coder()
@@ -63,18 +80,9 @@ void test_dataloader()
 
 int main()
 {
-    //test_lexicon();
+    test_lexicon();
     //test_coder();
     //test_dataloader();
-
-    blitz::LexiconMMU lexicon;
-    blitz::DataLoader dataloader;
-    lexicon.init_lexicon(dataloader.read_data());
-    //auto vec = dataloader.read_records();
-    //for (int i = 0; i < vec.size(); ++i) {
-        //lexicon.insert(vec[i]);
-    //}
-    lexicon.show_map_node();
 
     return 0;
 }

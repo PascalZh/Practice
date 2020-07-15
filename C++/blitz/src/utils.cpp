@@ -19,23 +19,6 @@ std::vector<std::string> split(const std::string& s, const std::string& delimite
     return tokens;
 }
 
-int str2int(const std::string& s)
-{
-    std::stringstream ss(s);
-    int ret;
-    ss >> ret;
-    return ret;
-}
-
-std::string int2str(int i)
-{
-    std::string s;
-    std::stringstream ss;
-    ss << i;
-    ss >> s;
-    return s;
-}
-
 std::string join(std::vector<std::string> v, const std::string& delimiters=" ")
 {
     if (v.size() < 1) {return "";}
@@ -44,3 +27,5 @@ std::string join(std::vector<std::string> v, const std::string& delimiters=" ")
         ret += delimiters + *it;
     return ret;
 }
+
+std::map<string, double> TimeIt::dict;

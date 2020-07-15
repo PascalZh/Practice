@@ -28,7 +28,7 @@ WordQuerySimple::WordQuerySimple()
         }
     }
 
-    // parse sogou_lexicon.txt, it takes about 1.6s, FIXME
+    // parse sogou_lexicon.txt, it takes about 1.6s
     auto t1 = std::chrono::high_resolution_clock::now();
     string path_sogou = "sogou_lexicon.txt";
     std::ifstream in_sogou(path_sogou);

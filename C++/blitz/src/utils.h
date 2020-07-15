@@ -4,15 +4,14 @@
 #include <sstream>
 #include <iostream>
 #include <exception>
+#include <chrono>
+#include <map>
+#include <functional>
 
 void split(const std::string& s, std::vector<std::string>& tokens, const std::string& delimiters);
 std::vector<std::string> split(const std::string& s, const std::string& delimiters);
 
 std::string join(std::vector<std::string> v, const std::string& delimiters);
-
-int str2int(const std::string& s);
-
-std::string int2str(int i);
 
 template <class T>
 std::string to_binary(T x)
@@ -47,3 +46,49 @@ lexical_cast(const Source& arg)
 
     return interpreter.str();
 }
+
+namespace termcolor {
+
+inline auto wrap_with(std::string code, std::string text)
+{
+    return "\033[" + code + "m" + text +"\033[0m";
+}
+
+inline std::string red(std::string text)     { return wrap_with("31", text); }
+inline std::string green(std::string text)   { return wrap_with("32", text); }
+inline std::string yellow(std::string text)  { return wrap_with("33", text); }
+inline std::string blue(std::string text)    { return wrap_with("34", text); }
+inline std::string magenta(std::string text) { return wrap_with("35", text); }
+inline std::string cyan(std::string text)    { return wrap_with("36", text); }
+inline std::string white(std::string text)   { return wrap_with("37", text); }
+
+} // namespace termcolor
+
+class TimeIt
+{
+    static constexpr auto now = std::chrono::high_resolution_clock::now;
+
+public:
+    static std::map<std::string, double> dict;
+
+    explicit TimeIt (std::string name = "default")
+        : m_name(name)
+        , m_start(now()) {}
+    ~TimeIt ()
+    {
+        std::chrono::duration<double, std::milli> ms = now() - m_start;
+        dict[m_name] = ms.count();
+    }
+
+    static void show()
+    {
+        using namespace termcolor;
+        for (auto& [name, time] : dict) {
+            std::cout << blue(name) << ": " << red(lexical_cast<std::string>(time)) << "ms" << std::endl;
+        }
+    }
+
+private:
+    std::string m_name;
+    std::chrono::time_point<std::chrono::high_resolution_clock> m_start;
+};

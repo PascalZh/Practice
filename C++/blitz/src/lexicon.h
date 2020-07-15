@@ -115,6 +115,7 @@ public:
     {
         if (buffered_ptrs.size() > 8) {
             auto& last_db = *buffered_ptrs.back();
+            assert(last_db.buf.size() != 0);
             string d = lexical_cast<string>(last_db.buf);
             last_db.coder = coder_type(d);
             last_db.data = coder.encode(d);

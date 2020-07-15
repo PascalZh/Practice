@@ -6,6 +6,6 @@ target("test")
     set_kind("binary")
     add_files("src/*.cpp")
     add_cxxflags("-std=c++20")
-    if is_mode("debug") then
-        add_defines("DEBUG")
+    if is_mode("release") then
+        add_defines("NDEBUG")
     end
