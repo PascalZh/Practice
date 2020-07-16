@@ -10,7 +10,7 @@
 #include <iostream>
 #include <cassert>
 
-#include "coder.h"
+#include "coder.hpp"
 
 namespace blitz
 {
@@ -142,7 +142,7 @@ struct PinyinRange {
     }
 };
 
-class Lexicon
+class LexiconBase
 {
 public:
     virtual vector<Record> find_all(const string& pinyin) const = 0;
@@ -150,7 +150,7 @@ public:
     virtual bool set_freq(const string& pinyin, const string& word, function<int(int)> op) = 0;
 };
 
-class LexiconMMU : public Lexicon
+class Lexicon : LexiconBase
 {
 private:
     map<PinyinRange, DataBlock> m_dict;

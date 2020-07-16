@@ -5,7 +5,7 @@
 #include <functional>
 #include <map>
 #include <queue>
-#include "utils.h"
+#include "utils.hpp"
 
 namespace blitz {
 

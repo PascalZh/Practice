@@ -1,4 +1,4 @@
-#include "coder.h"
+#include "coder.hpp"
 namespace blitz {
 
 HuffmanCoder::HuffmanCoder(const string& text)

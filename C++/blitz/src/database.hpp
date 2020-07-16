@@ -1,6 +1,6 @@
 #pragma once
-#include "lexicon.h"
-#include "utils.h"
+#include "lexicon.hpp"
+#include "utils.hpp"
 #include <string>
 #include <sstream>
 #include <fstream>

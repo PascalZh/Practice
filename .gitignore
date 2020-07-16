@@ -32,3 +32,4 @@ foobar.*
 
 /C++/blitz/src/test
 /C++/blitz/**/*.txt
+/C++/blitz/callgrind.out.*

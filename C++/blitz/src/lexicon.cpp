@@ -1,4 +1,4 @@
-#include "lexicon.h"
+#include "lexicon.hpp"
 
 namespace blitz {
 
@@ -29,7 +29,7 @@ vector<Record> DataBlock::find_all(const string& pinyin)
     return result;
 }
 
-bool LexiconMMU::insert(Record record)
+bool Lexicon::insert(Record record)
 {
     bool success;
     PinyinRange range{record.pinyin, record.pinyin};
@@ -60,7 +60,7 @@ bool LexiconMMU::insert(Record record)
     return success;
 }
 
-bool LexiconMMU::set_freq(const string& pinyin, const string& word, function<int(int)> op)
+bool Lexicon::set_freq(const string& pinyin, const string& word, function<int(int)> op)
 {
     auto it_dict = m_dict.find(PinyinRange{pinyin, pinyin});
     if (it_dict == m_dict.end())
@@ -78,7 +78,7 @@ bool LexiconMMU::set_freq(const string& pinyin, const string& word, function<int
     return true;
 }
 
-void LexiconMMU::init_lexicon(const string& data)
+void Lexicon::init_lexicon(const string& data)
 {
     string::size_type last_pos = 0;
     string::size_type pos = data.find_first_of('\n', 0);
@@ -101,7 +101,7 @@ void LexiconMMU::init_lexicon(const string& data)
     }
 }
 
-void LexiconMMU::split_into_two_nodes(decltype(m_dict)::iterator it)
+void Lexicon::split_into_two_nodes(decltype(m_dict)::iterator it)
 {
     const auto records_ = it->second.records();
 
@@ -122,7 +122,7 @@ void LexiconMMU::split_into_two_nodes(decltype(m_dict)::iterator it)
     }
 }
 
-void LexiconMMU::show_map_node() const
+void Lexicon::show_map_node() const
 {
     for(auto& [range, datablock] : m_dict) {
         cout << "data.size() = " << datablock.size();

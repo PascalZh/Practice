@@ -92,3 +92,21 @@ private:
     std::string m_name;
     std::chrono::time_point<std::chrono::high_resolution_clock> m_start;
 };
+
+#ifndef UTILS_DISABLE_STREAM_OPERATOR_87
+template <class T>
+std::ostream& operator<<(std::ostream& out, std::vector<T> vec)
+{
+    for (auto& v : vec)
+        out << v << " ";
+    return out;
+}
+
+template <class Key, class Value>
+std::ostream& operator<<(std::ostream& out, std::map<Key, Value> dict)
+{
+    for (auto& [key, value] : dict)
+        out << key << ": " << value << std::endl;
+    return out;
+}
+#endif
