@@ -4,10 +4,14 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <memory>
 #include <cassert>
 #include <algorithm>
 #include <numeric>
 #include "utils.hpp"
+#include "lexicon.hpp"
+#include "database.hpp"
+
 
 namespace blitz {
 
@@ -16,29 +20,53 @@ using namespace std;
 class InputMethodBase
 {
 public:
-    virtual void on_input(char ch) = 0;
-    virtual void choose_the_candidate(unsigned idx) = 0;
+    virtual bool on_input(char ch) = 0;
+    virtual bool choose_the_candidate(unsigned idx) = 0;
 };
 
 class InputMethod : InputMethodBase
 {
 public:
-    static bool check_input(char ch) { return 'a' <= ch and ch <= 'z'; }
-    void on_input(char ch)    { m_input_seq.push_back(ch); set_candidates(); }
-    void on_input(string seq) { m_input_seq += seq       ; set_candidates(); }
+    InputMethod() : m_dl("./lexicon.txt"), m_lex(Lexicon::create())
+    {
+        m_lex->init_lexicon(m_dl.read_data());
+    }
+    bool on_input(char ch)
+    {
+        if (!check_input(ch))
+            return false;
+        m_input_seq.push_back(ch);
+        set_candidates();
+        return true;
+    }
+    bool on_input(string seq)
+    {
+        if (!all_of(seq.begin(), seq.end(), check_input))
+            return false;
+        m_input_seq += seq;
+        set_candidates();
+        return true;
+    }
     void set_candidates();
+    void sort_candidates();
+    const vector<Record>& get_candidates() const;
 
-    void choose_the_candidate(unsigned idx);
+    bool choose_the_candidate(unsigned idx);
 
 private:
     enum class Mode {Normal};
 
+    DataLoader m_dl;
+    unique_ptr<Lexicon> m_lex;
     Mode m_mode = Mode::Normal;
     string m_input_seq;
+    vector<Record> m_candidates;
 
     void set_candidates_normal();
 
+    static bool check_input(char ch) { return 'a' <= ch and ch <= 'z'; }
     static vector<string> tokenize(const string& input);
+
     static const map<string, vector<string>> init_valid_pinyin_dict();
     static const vector<string> init_valid_pinyin_tokens();
 

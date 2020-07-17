@@ -23,8 +23,6 @@ public:
 
     bool good() { return m_file.good(); }
 
-    vector<Record> read_records() { return lexical_cast<vector<Record>>(this->read_data()); }
-    
     string read_data()
     {
         std::stringstream buffer;

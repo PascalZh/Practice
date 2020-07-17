@@ -1,8 +1,140 @@
 #include "lexicon.hpp"
-
 namespace blitz {
 
-list<DataBlock*> DataBlock::buffered_ptrs;
+class LexiconImpl;
+
+struct DataBlock {
+    // The lexicon is encoded in `data` by `coder`.
+private:
+    unique_ptr<Coder> coder;
+    string data;
+    mutable vector<Record> buf;
+    static inline list<DataBlock*> pbuffered;
+    static inline list<const DataBlock*> pcbuffered;
+
+public:
+    using iterator = vector<Record>::iterator;
+    using const_iterator = vector<Record>::const_iterator;
+    explicit DataBlock(const string& data_)
+        : coder(Coder::create(data_)), data(coder->encode(data_))
+    {
+        assert(data_ == coder->decode(data));
+    }
+
+    DataBlock(DataBlock&& db) : coder(move(db.coder)), data(move(db.data)), buf(move(db.buf))
+    {
+        if (!db.buf.empty()) {
+            pbuffered.remove(&db);
+            pbuffered.remove(this);
+            pbuffered.push_front(this);
+        }
+    }
+
+    DataBlock(const DataBlock&) = delete;
+    DataBlock& operator=(const DataBlock&) = delete;
+
+    bool insert(Record record);
+
+    vector<Record> find_all(const string& pinyin) const;
+
+    // The following functions will not call `commit_buf` because these functions
+    // return a iterator which can be invalidated by `commit_buf`.
+    iterator find_record(const string& pinyin, const string& word)
+    {
+        auto records_ = this->records();
+        return find_if(records_.begin(), records_.end(),
+                [&pinyin, &word](const Record& r) { return r.pinyin == pinyin && r.word == word; });
+    }
+    iterator begin() { return records().begin(); }
+    iterator end() { return records().end(); }
+    size_t size() const { return records().size(); }
+
+    vector<Record>& records()
+    {
+        if (buf.empty()) {
+            buf = lexical_cast<vector<Record>>(coder->decode(data));
+            pbuffered.remove(this);
+            pbuffered.push_front(this);
+        }
+        return buf;
+    }
+
+    vector<Record>& records() const
+    {
+        if (buf.empty()) {
+            buf = lexical_cast<vector<Record>>(coder->decode(data));
+            pcbuffered.remove(this);
+            pcbuffered.push_front(this);
+        }
+        return buf;
+    }
+
+    void commit_buf()
+    {
+        if (pbuffered.size() > 8) {
+            auto& last_db = *pbuffered.back();
+            assert(last_db.buf.size() != 0);
+            string d = lexical_cast<string>(last_db.buf);
+            last_db.coder = Coder::create(d);
+            last_db.data = coder->encode(d);
+            last_db.buf.clear();
+            last_db.buf.shrink_to_fit(); 
+        }
+    }
+    void commit_buf() const
+    {
+        if (pcbuffered.size() > 8) {
+            auto& last_db = *pcbuffered.back();
+            last_db.buf.clear();
+            last_db.buf.shrink_to_fit(); 
+        }
+    }
+};
+
+struct PinyinRange {
+    string min;
+    string max;
+    // According to the ordering defined below, two ranges are equal if they
+    // intersect each other. In this case, map::insert will fail because the
+    // 'same' key is being inserted, so we can choose to deal with this case
+    // more conveniently.
+    bool operator<(const PinyinRange& rhs) const { return max < rhs.min; }
+    bool operator>(const PinyinRange& rhs) const { return min > rhs.max; }
+};
+
+class LexiconImpl : public Lexicon
+{
+private:
+    map<PinyinRange, DataBlock> m_dict;
+
+    void split_into_two_nodes(decltype(m_dict)::iterator it);
+
+    static constexpr int MAX_RECORDS = 256;
+
+public:
+    bool insert(Record e);
+    bool erase(const string& pinyin, const string& word) { return true; }
+    vector<Record> find_all(const string& pinyin) const
+    {
+        // see struct PinyinRange, two ranges are equivalent if they intersect.
+        auto it = m_dict.find(PinyinRange{pinyin, pinyin});
+        auto ret = it == m_dict.end() ? vector<Record>()
+            : it->second.find_all(pinyin);
+
+        return ret;
+    }
+
+    bool set_freq(const string& pinyin, const string& word, function<int(int)> op);
+
+    void init_lexicon(const string& data);
+    // some auxiliary functions for debug
+    void show_map_node() const;
+};
+
+unique_ptr<Lexicon> Lexicon::create()
+{
+    return make_unique<LexiconImpl>();
+}
 
 bool DataBlock::insert(Record record)
 {
@@ -17,7 +149,7 @@ bool DataBlock::insert(Record record)
     return true;
 }
 
-vector<Record> DataBlock::find_all(const string& pinyin)
+vector<Record> DataBlock::find_all(const string& pinyin) const
 {
     const auto records_ = this->records();
 
@@ -29,7 +161,7 @@ vector<Record> DataBlock::find_all(const string& pinyin)
     return result;
 }
 
-bool Lexicon::insert(Record record)
+bool LexiconImpl::insert(Record record)
 {
     bool success;
     PinyinRange range{record.pinyin, record.pinyin};
@@ -60,7 +192,7 @@ bool Lexicon::insert(Record record)
     return success;
 }
 
-bool Lexicon::set_freq(const string& pinyin, const string& word, function<int(int)> op)
+bool LexiconImpl::set_freq(const string& pinyin, const string& word, function<int(int)> op)
 {
     auto it_dict = m_dict.find(PinyinRange{pinyin, pinyin});
     if (it_dict == m_dict.end())
@@ -78,7 +210,7 @@ bool Lexicon::set_freq(const string& pinyin, const string& word, function<int(in
     return true;
 }
 
-void Lexicon::init_lexicon(const string& data)
+void LexiconImpl::init_lexicon(const string& data)
 {
     string::size_type last_pos = 0;
     string::size_type pos = data.find_first_of('\n', 0);
@@ -101,7 +233,7 @@ void Lexicon::init_lexicon(const string& data)
     }
 }
 
-void Lexicon::split_into_two_nodes(decltype(m_dict)::iterator it)
+void LexiconImpl::split_into_two_nodes(decltype(m_dict)::iterator it)
 {
     const auto records_ = it->second.records();
 
@@ -122,7 +254,7 @@ void Lexicon::split_into_two_nodes(decltype(m_dict)::iterator it)
     }
 }
 
-void Lexicon::show_map_node() const
+void LexiconImpl::show_map_node() const
 {
     for(auto& [range, datablock] : m_dict) {
         cout << "data.size() = " << datablock.size();

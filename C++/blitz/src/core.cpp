@@ -12,6 +12,16 @@ void InputMethod::set_candidates()
     }
 }
 
+void InputMethod::sort_candidates()
+{
+
+}
+
+const vector<Record>& InputMethod::get_candidates() const
+{
+
+}
+
 void InputMethod::set_candidates_normal()
 {
     vector<string> tokens = tokenize(m_input_seq);
@@ -60,7 +70,7 @@ vector<string> InputMethod::tokenize(const string& input)
     return ret;
 }
 
-void InputMethod::choose_the_candidate(unsigned idx)
+bool InputMethod::choose_the_candidate(unsigned idx)
 {
 
 }
