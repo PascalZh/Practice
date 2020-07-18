@@ -14,65 +14,63 @@ void InputMethod::set_candidates()
 
 void InputMethod::sort_candidates()
 {
-
+    std::sort(m_candidates.begin(), m_candidates.end(),
+            [](const Record& lhs, const Record& rhs) { return lhs.freq < rhs.freq; } );
 }
 
 const vector<Record>& InputMethod::get_candidates() const
 {
-
+    return m_candidates;
 }
 
 void InputMethod::set_candidates_normal()
 {
-    vector<string> tokens = tokenize(m_input_seq);
+    this->tokenize();
 
-    vector<vector<string>> possible_pinyins_;
-    for (auto& token : tokens) {
-        vector<string> pinyins = valid_pinyin_dict.at(token);
-        possible_pinyins_.push_back(pinyins);
-    }
+    vector<vector<string>> pp; // a collection of sets of possible pinyin
+    std::transform(m_tokens.begin(), m_tokens.end(), std::back_inserter(pp),
+            [](const string& token) { return valid_pinyin_dict.at(token); });
 
     auto cartesian_product = [](vector<string> lhs, vector<string> rhs)
     {
-        if (lhs.empty()) return rhs;
-        if (rhs.empty()) return lhs;
+        if (lhs.empty()) return rhs; if (rhs.empty()) return lhs;
 
         vector<string> ret;
-        for (auto& l : lhs)
-            for (auto& r : rhs)
+        for (auto& l : lhs) for (auto& r : rhs)
                 ret.emplace_back(l + "'" + r);
         return ret;
     };
-    vector<string> possible_pinyins = std::accumulate(
-            possible_pinyins_.begin(),
-            possible_pinyins_.end(),
-            vector<string>{},
-            cartesian_product
-            );
-    cout << possible_pinyins << endl;
-}
-
-vector<string> InputMethod::tokenize(const string& input)
-{
-    vector<string> ret;
-    string::size_type begin = 0;
-    for (int n = 1; begin < input.size(); n = 1) {
-        while (std::binary_search(
-                    valid_pinyin_tokens.begin(),
-                    valid_pinyin_tokens.end(),
-                    input.substr(begin, n)
-                    ) && begin + n - 1 < input.size())
-            ++n;
-        --n;
-        ret.emplace_back(input.substr(begin, n));
-        begin += n;
+    vector<string> possible_pinyins = std::accumulate(pp.begin(), pp.end(),
+            vector<string>{}, cartesian_product);
+    for (auto& pinyin : possible_pinyins) {
+        auto records = m_lex->find_all(pinyin);
+        m_candidates.insert(m_candidates.end(), records.begin(), records.end());
     }
-    return ret;
 }
 
-bool InputMethod::choose_the_candidate(unsigned idx)
+void InputMethod::tokenize()
 {
+    TimeIt it("tokenize");
+    assert(join(m_tokens, "") == m_input_seq.substr(0, m_input_seq.size() - 1));
+    if (m_tokens.empty()) {
+        m_tokens.push_back(m_input_seq);
+        return;
+    }
+    string new_ch = m_input_seq.substr(m_input_seq.size() - 1, 1);
+    string maybe_token = m_tokens.back() + new_ch;
+    if (std::binary_search(valid_pinyin_tokens.begin(), valid_pinyin_tokens.end(), maybe_token))
+        m_tokens.back() = maybe_token;
+    else
+        m_tokens.push_back(new_ch);
+}
 
+bool InputMethod::choose_the_candidate(size_t idx)
+{
+    if (not idx < m_candidates.size())
+        return false;
+    auto& cand = m_candidates[idx];
+    m_lex->set_freq(cand.pinyin, cand.word, [](int x) { return x + 1; });
+    return true;
 }
 
 const map<string, vector<string>> InputMethod::init_valid_pinyin_dict()

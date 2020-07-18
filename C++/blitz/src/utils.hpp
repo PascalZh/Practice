@@ -11,7 +11,7 @@
 void split(const std::string& s, std::vector<std::string>& tokens, const std::string& delimiters);
 std::vector<std::string> split(const std::string& s, const std::string& delimiters);
 
-std::string join(std::vector<std::string> v, const std::string& delimiters);
+std::string join(const std::vector<std::string>& v, const std::string& delimiters);
 
 template <class T>
 std::string to_binary(T x)
@@ -68,8 +68,12 @@ class TimeIt
 {
     static constexpr auto now = std::chrono::high_resolution_clock::now;
 
+    struct Info {
+        double time;
+        long count;
+    };
 public:
-    static std::map<std::string, double> dict;
+    static inline std::map<std::string, Info> dict;
 
     explicit TimeIt (std::string name = "default")
         : m_name(name)
@@ -77,16 +81,17 @@ public:
     ~TimeIt ()
     {
         std::chrono::duration<double, std::milli> ms = now() - m_start;
-        dict[m_name] = ms.count();
-    }
 
-    static void show()
-    {
-        using namespace termcolor;
-        for (auto& [name, time] : dict) {
-            std::cout << blue(name) << ": " << red(lexical_cast<std::string>(time)) << "ms" << std::endl;
+        auto it = dict.find(m_name);
+        if (it == dict.end())
+            dict[m_name] = {ms.count(), 1};
+        else {
+            dict[m_name].time += ms.count();
+            dict[m_name].count += 1;
         }
     }
+
+    static void show();
 
 private:
     std::string m_name;
@@ -95,7 +100,7 @@ private:
 
 #ifndef UTILS_DISABLE_STREAM_OPERATOR_87
 template <class T>
-std::ostream& operator<<(std::ostream& out, std::vector<T> vec)
+std::ostream& operator<<(std::ostream& out, const std::vector<T>& vec)
 {
     for (auto& v : vec)
         out << v << " ";
@@ -103,7 +108,7 @@ std::ostream& operator<<(std::ostream& out, std::vector<T> vec)
 }
 
 template <class Key, class Value>
-std::ostream& operator<<(std::ostream& out, std::map<Key, Value> dict)
+std::ostream& operator<<(std::ostream& out, const std::map<Key, Value>& dict)
 {
     for (auto& [key, value] : dict)
         out << key << ": " << value << std::endl;

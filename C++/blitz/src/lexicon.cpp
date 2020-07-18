@@ -131,6 +131,10 @@ public:
     void show_map_node() const;
 };
 
+//┌───────────────────────────────────────────────────────────────────────────┐
+//│                               functions                                   │
+//└───────────────────────────────────────────────────────────────────────────┘
+
 unique_ptr<Lexicon> Lexicon::create()
 {
     return make_unique<LexiconImpl>();

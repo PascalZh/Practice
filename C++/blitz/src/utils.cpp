@@ -1,7 +1,7 @@
 #include "utils.hpp"
     
 using std::vector; using std::string;
-void split(const string& s, vector<string>& tokens, const string& delimiters=" ")
+void split(const string& s, vector<string>& tokens, const string& delimiters)
 {
     string::size_type lastPos = s.find_first_not_of(delimiters, 0);
     string::size_type pos = s.find_first_of(delimiters, lastPos);
@@ -12,14 +12,14 @@ void split(const string& s, vector<string>& tokens, const string& delimiters=" "
     }
 }
 
-std::vector<std::string> split(const std::string& s, const std::string& delimiters=" ")
+std::vector<std::string> split(const std::string& s, const std::string& delimiters)
 {
     vector<string> tokens;
     split(s, tokens, delimiters);
     return tokens;
 }
 
-std::string join(std::vector<std::string> v, const std::string& delimiters=" ")
+std::string join(const std::vector<std::string>& v, const std::string& delimiters)
 {
     if (v.size() < 1) {return "";}
     std::string ret(v[0]);
@@ -28,4 +28,12 @@ std::string join(std::vector<std::string> v, const std::string& delimiters=" ")
     return ret;
 }
 
-std::map<string, double> TimeIt::dict;
+void TimeIt::show()
+{
+    using namespace termcolor;
+    for (auto& [name, info] : dict) {
+        std::cout << cyan(name) << ": \ttime="
+            << red(lexical_cast<std::string>(info.time)) << "ms, \tcount="
+            << red(lexical_cast<std::string>(info.count)) << "." << std::endl;
+    }
+}

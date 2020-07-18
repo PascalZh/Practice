@@ -21,13 +21,13 @@ class InputMethodBase
 {
 public:
     virtual bool on_input(char ch) = 0;
-    virtual bool choose_the_candidate(unsigned idx) = 0;
+    virtual bool choose_the_candidate(size_t idx) = 0;
 };
 
 class InputMethod : InputMethodBase
 {
 public:
-    InputMethod() : m_dl("./lexicon.txt"), m_lex(Lexicon::create())
+    InputMethod() : m_dl("./lexicon.txt"), m_lex(Lexicon::create()), m_mode(Mode::Normal)
     {
         m_lex->init_lexicon(m_dl.read_data());
     }
@@ -47,25 +47,27 @@ public:
         set_candidates();
         return true;
     }
-    void set_candidates();
     void sort_candidates();
     const vector<Record>& get_candidates() const;
 
-    bool choose_the_candidate(unsigned idx);
+    bool choose_the_candidate(size_t idx);
 
 private:
     enum class Mode {Normal};
 
     DataLoader m_dl;
     unique_ptr<Lexicon> m_lex;
-    Mode m_mode = Mode::Normal;
+
+    Mode m_mode;
     string m_input_seq;
+    vector<string> m_tokens;
     vector<Record> m_candidates;
 
+    void set_candidates();
+    void tokenize();
     void set_candidates_normal();
 
     static bool check_input(char ch) { return 'a' <= ch and ch <= 'z'; }
-    static vector<string> tokenize(const string& input);
 
     static const map<string, vector<string>> init_valid_pinyin_dict();
     static const vector<string> init_valid_pinyin_tokens();

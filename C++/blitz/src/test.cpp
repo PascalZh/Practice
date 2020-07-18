@@ -30,11 +30,25 @@ struct Foo {
 
 void test_inputmethod()
 {
-    cout << InputMethod::valid_pinyin_dict << endl;
-    cout << InputMethod::valid_pinyin_tokens << endl;
+    //cout << InputMethod::valid_pinyin_dict << endl;
+    //cout << InputMethod::valid_pinyin_tokens << endl;
     InputMethod im;
-    im.on_input('c');
-    im.on_input('n');
+    {
+        TimeIt it("input 1 character");
+        cout << im.on_input('n') << endl;
+    }
+    {
+        TimeIt it("input 2 character");
+        cout << im.on_input('h') << endl;
+    }
+    {
+        TimeIt it("input 3 character");
+        cout << im.on_input('s') << endl;
+    }
+    {
+        TimeIt it("input 4 character");
+        cout << im.on_input('j') << endl;
+    }
 }
 
 void test_lexicon()
@@ -108,10 +122,11 @@ void test_dataloader()
 
 int main()
 {
-    //test_inputmethod();
-    test_lexicon();
+    test_inputmethod();
+    //test_lexicon();
     //test_coder();
     //test_dataloader();
+    TimeIt::show();
 
     return 0;
 }
