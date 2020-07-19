@@ -4,8 +4,8 @@ namespace blitz {
 class IdentityCoder : public Coder
 {
 public:
-    string encode(const string& data) { return data; }
-    string decode(const string& data) { return data; }
+    void encode(string& data) {}
+    void decode(string& data) {}
 };
 
 class HuffmanCoder : public Coder
@@ -19,8 +19,8 @@ public:
         if (m_root.right) delete_tree(m_root.right);
     }
 
-    string encode(const string& str) const;
-    string decode(const string& data_) const;
+    void encode(string& str) const;
+    void decode(string& data_) const;
 
 private:
     struct Tree {
@@ -101,7 +101,7 @@ void HuffmanCoder::delete_tree(Tree* t)
     if (left) delete_tree(left);
 }
 
-string HuffmanCoder::encode(const string& str) const
+void HuffmanCoder::encode(string& str) const
 {
     constexpr size_t bit_width = sizeof(data_type) * 8;
     vector<data_type> output;
@@ -129,10 +129,10 @@ string HuffmanCoder::encode(const string& str) const
     m_padding = padding;
     string output_(reinterpret_cast<const char*>(output.data()),
             reinterpret_cast<const char*>(output.data() + output.size()));
-    return output_;
+    str = output_;
 }
 
-string HuffmanCoder::decode(const string& data_) const
+void HuffmanCoder::decode(string& data_) const
 {
     constexpr size_t bit_width = sizeof(data_type) * 8;
     string output;
@@ -151,7 +151,7 @@ string HuffmanCoder::decode(const string& data_) const
             }
         }
     }
-    return output;
+    data_ = output;
 }
 
 void HuffmanCoder::generate_code(Tree& t)

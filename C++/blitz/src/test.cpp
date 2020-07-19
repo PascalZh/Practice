@@ -33,22 +33,27 @@ void test_inputmethod()
     //cout << InputMethod::valid_pinyin_dict << endl;
     //cout << InputMethod::valid_pinyin_tokens << endl;
     InputMethod im;
+    cin.get();
     {
         TimeIt it("input 1 character");
         cout << im.on_input('n') << endl;
+        //cout << im.get_candidates() << endl;
     }
     {
         TimeIt it("input 2 character");
         cout << im.on_input('h') << endl;
+        //cout << im.get_candidates() << endl;
     }
     {
         TimeIt it("input 3 character");
         cout << im.on_input('s') << endl;
+        //cout << im.get_candidates() << endl;
     }
-    {
-        TimeIt it("input 4 character");
-        cout << im.on_input('j') << endl;
-    }
+    //{
+    //    TimeIt it("input 4 character");
+    //    cout << im.on_input('j') << endl;
+    //    //cout << im.get_candidates() << endl;
+    //}
 }
 
 void test_lexicon()
@@ -89,8 +94,6 @@ void test_lexicon()
         }
     }
 
-    TimeIt::show();
-
 }
 
 void test_coder()
@@ -98,11 +101,13 @@ void test_coder()
     string s = "啊啊啊啊啊啊啊啊啊啊 啊wejowfjoiejfiowf";
     //for (int i = 0; i < 10; ++i) s += s;
     unique_ptr<Coder> c = Coder::create(s);
-    auto m = c->encode(s);
+    auto m = s;
+    c->encode(s);
 
     cout << "original string:         " << s << endl;
     cout << "encoded data:            " << m << endl;
-    cout << "after encode and decode: " << c->decode(m) << endl;
+    c->decode(s);
+    cout << "after encode and decode: " << m << endl;
     cout << "memory usage of string:       " << s.size() << endl;
     cout << "memory usage of encoded data: " << m.size() << endl;
     cout << "rate:                         " << m.size() / float(s.size()) << endl;

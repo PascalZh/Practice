@@ -3,5 +3,4 @@
 
 namespace blitz {
     
-
 } // namespace blitz

@@ -2,9 +2,16 @@
 
 namespace blitz {
 
+InputMethod::InputMethod() : m_dl(make_unique<DataLoader>()), m_lex(Lexicon::create()),
+    m_mode(Mode::Normal)
+{
+    string data = m_dl->read_data();
+    m_lex->init_lexicon(data);
+}
+
 void InputMethod::set_candidates()
 {
-    assert(std::all_of(m_input_seq.begin(), m_input_seq.end(), check_input));
+    Expects(std::all_of(m_input_seq.begin(), m_input_seq.end(), check_input));
     switch (m_mode) {
         case Mode::Normal:
             set_candidates_normal();
@@ -29,7 +36,7 @@ void InputMethod::set_candidates_normal()
 
     vector<vector<string>> pp; // a collection of sets of possible pinyin
     std::transform(m_tokens.begin(), m_tokens.end(), std::back_inserter(pp),
-            [](const string& token) { return valid_pinyin_dict.at(token); });
+            [](const string& token) { return valid_syllable_dict.at(token); });
 
     auto cartesian_product = [](vector<string> lhs, vector<string> rhs)
     {
@@ -42,7 +49,9 @@ void InputMethod::set_candidates_normal()
     };
     vector<string> possible_pinyins = std::accumulate(pp.begin(), pp.end(),
             vector<string>{}, cartesian_product);
+    cout << possible_pinyins.size() << endl;
     for (auto& pinyin : possible_pinyins) {
+        TimeIt it("find_all");
         auto records = m_lex->find_all(pinyin);
         m_candidates.insert(m_candidates.end(), records.begin(), records.end());
     }
@@ -51,14 +60,14 @@ void InputMethod::set_candidates_normal()
 void InputMethod::tokenize()
 {
     TimeIt it("tokenize");
-    assert(join(m_tokens, "") == m_input_seq.substr(0, m_input_seq.size() - 1));
+    Expects(join(m_tokens, "") == m_input_seq.substr(0, m_input_seq.size() - 1));
     if (m_tokens.empty()) {
         m_tokens.push_back(m_input_seq);
         return;
     }
     string new_ch = m_input_seq.substr(m_input_seq.size() - 1, 1);
     string maybe_token = m_tokens.back() + new_ch;
-    if (std::binary_search(valid_pinyin_tokens.begin(), valid_pinyin_tokens.end(), maybe_token))
+    if (std::binary_search(valid_syllable_tokens.begin(), valid_syllable_tokens.end(), maybe_token))
         m_tokens.back() = maybe_token;
     else
         m_tokens.push_back(new_ch);
@@ -73,10 +82,10 @@ bool InputMethod::choose_the_candidate(size_t idx)
     return true;
 }
 
-const map<string, vector<string>> InputMethod::init_valid_pinyin_dict()
+const map<string, vector<string>> InputMethod::init_valid_syllable_dict()
 {
     map<string, vector<string>> ret;
-    for(auto& pinyin : InputMethod::valid_pinyin) {
+    for(auto& pinyin : InputMethod::valid_syllable) {
         for(int i = 0; i < pinyin.size(); ++i) {
             string token = pinyin.substr(0, i + 1);
             auto it = ret.find(token);
@@ -92,10 +101,10 @@ const map<string, vector<string>> InputMethod::init_valid_pinyin_dict()
     return ret;
 }
 
-const vector<string> InputMethod::init_valid_pinyin_tokens()
+const vector<string> InputMethod::init_valid_syllable_tokens()
 {
     vector<string> ret;
-    for (auto& [token, _] : InputMethod::valid_pinyin_dict)
+    for (auto& [token, _] : InputMethod::valid_syllable_dict)
         ret.push_back(token);
     std::sort(ret.begin(), ret.end());
     return ret;

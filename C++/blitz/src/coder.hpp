@@ -15,8 +15,8 @@ using namespace std;
 class Coder
 {
 public:
-    virtual string encode(const string& data) = 0;
-    virtual string decode(const string& data) = 0;
+    virtual void encode(string& data) = 0;
+    virtual void decode(string& data) = 0;
 
     static unique_ptr<Coder> create(const string& text);
 

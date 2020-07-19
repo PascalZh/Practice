@@ -63,6 +63,7 @@ class Lexicon
 public:
     virtual bool           insert(Record e) = 0;
     virtual bool           erase(const string& pinyin, const string& word) = 0;
+    // TODO: find all records start with `pinyin`
     virtual vector<Record> find_all(const string& pinyin) const = 0;
     virtual bool           set_freq(const string& pinyin, const string& word, function<int(int)> op) = 0;
 

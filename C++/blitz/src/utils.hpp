@@ -6,6 +6,13 @@
 #include <exception>
 #include <chrono>
 #include <map>
+#include <queue>
+#include <stack>
+#include <set>
+#include <unordered_map>
+#include <unordered_set>
+#include <list>
+#include <forward_list>
 #include <functional>
 
 void split(const std::string& s, std::vector<std::string>& tokens, const std::string& delimiters);
@@ -115,3 +122,74 @@ std::ostream& operator<<(std::ostream& out, const std::map<Key, Value>& dict)
     return out;
 }
 #endif
+
+namespace is_stl_container_impl{
+  template <typename T> struct is_array:std::false_type{}; \
+  template <typename T, std::size_t N> struct is_array<std::array<T,N>>:std::true_type{};
+}
+template <typename T> struct is_array {
+  static constexpr bool const value = is_stl_container_impl::is_array<std::decay_t<T>>::value;
+};
+
+#ifdef REGISTER_IS_STL_CONTAINER
+#error "REGISTER_IS_STL_CONTAINER defined"
+#endif
+#define REGISTER_IS_STL_CONTAINER(container) \
+namespace is_stl_container_impl { \
+  template <typename T>       struct is_##container:std::false_type{}; \
+  template <typename... Args> struct is_##container<std::container<Args...>>:std::true_type{}; \
+}\
+template <typename T> struct is_##container { \
+  static constexpr bool const value = is_stl_container_impl::is_##container<std::decay_t<T>>::value; \
+};
+
+REGISTER_IS_STL_CONTAINER(vector);
+REGISTER_IS_STL_CONTAINER(deque);
+REGISTER_IS_STL_CONTAINER(list);
+REGISTER_IS_STL_CONTAINER(forward_list);
+REGISTER_IS_STL_CONTAINER(set);
+REGISTER_IS_STL_CONTAINER(multiset);
+REGISTER_IS_STL_CONTAINER(map);
+REGISTER_IS_STL_CONTAINER(multimap);
+REGISTER_IS_STL_CONTAINER(unordered_set);
+REGISTER_IS_STL_CONTAINER(unordered_map);
+REGISTER_IS_STL_CONTAINER(stack);
+REGISTER_IS_STL_CONTAINER(queue);
+REGISTER_IS_STL_CONTAINER(priority_queue);
+
+template <typename T> concept Fundamental = std::is_fundamental<T>::value;
+template <typename T> concept Compound = !Fundamental<T>;
+template <typename T> concept Vector = is_vector<T>::value;
+template <typename T> concept Map = is_map<T>::value;
+
+size_t calc_memory_usage(const Fundamental auto& m)
+{
+    return sizeof(decltype(m));
+}
+
+inline size_t calc_memory_usage(const std::string& str)
+{
+    return sizeof(std::string) + str.capacity();
+}
+
+size_t calc_memory_usage(const Vector auto& vec)
+{
+    size_t ret = sizeof(decltype(vec));
+    for (auto& v : vec)
+        ret += calc_memory_usage(v);
+    for (int i = 0; i < vec.capacity() - vec.size(); ++i)
+        ret += sizeof(typename std::decay_t<decltype(vec)>::value_type);
+    return ret;
+}
+
+size_t calc_memory_usage(const Map auto& m)
+{
+    size_t ret = sizeof(decltype(m));
+    for (auto& [k, v] : m) {
+        ret += calc_memory_usage(k) + calc_memory_usage(v) + 2 * sizeof(void*);
+    }
+    return ret;
+}
+
+#define Expects(...) assert((__VA_ARGS__))
+#define Ensures(...) assert((__VA_ARGS__))

@@ -34,6 +34,8 @@ void TimeIt::show()
     for (auto& [name, info] : dict) {
         std::cout << cyan(name) << ": \ttime="
             << red(lexical_cast<std::string>(info.time)) << "ms, \tcount="
-            << red(lexical_cast<std::string>(info.count)) << "." << std::endl;
+            << red(lexical_cast<std::string>(info.count)) << "\taverage="
+            << red(lexical_cast<std::string>(info.time / info.count)) << "ms."
+            << std::endl;
     }
 }

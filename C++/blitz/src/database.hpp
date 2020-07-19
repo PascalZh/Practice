@@ -27,6 +27,7 @@ public:
     {
         std::stringstream buffer;
         buffer << m_file.rdbuf();
+        m_file.close();
         return buffer.str();
     }
 };

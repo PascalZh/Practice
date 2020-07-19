@@ -1,8 +1,6 @@
 #include "lexicon.hpp"
 namespace blitz {
 
-class LexiconImpl;
-
 struct DataBlock {
     // The lexicon is encoded in `data` by `coder`.
 private:
@@ -16,9 +14,15 @@ public:
     using iterator = vector<Record>::iterator;
     using const_iterator = vector<Record>::const_iterator;
     explicit DataBlock(const string& data_)
-        : coder(Coder::create(data_)), data(coder->encode(data_))
+        : coder(Coder::create(data_)), data(data_)
     {
-        assert(data_ == coder->decode(data));
+        coder->encode(data);
+        Ensures([&data_, this]() {
+            string d(data_);
+            coder->encode(d);
+            coder->decode(d);
+            return d == data_;
+        } ());
     }
 
     DataBlock(DataBlock&& db) : coder(move(db.coder)), data(move(db.data)), buf(move(db.buf))
@@ -52,7 +56,10 @@ public:
     vector<Record>& records()
     {
         if (buf.empty()) {
-            buf = lexical_cast<vector<Record>>(coder->decode(data));
+            string d(data);
+            coder->decode(d);
+            buf = lexical_cast<vector<Record>>(d);
+
             pbuffered.remove(this);
             pbuffered.push_front(this);
         }
@@ -62,7 +69,10 @@ public:
     vector<Record>& records() const
     {
         if (buf.empty()) {
-            buf = lexical_cast<vector<Record>>(coder->decode(data));
+            string d(data);
+            coder->decode(d);
+            buf = lexical_cast<vector<Record>>(d);
+
             pcbuffered.remove(this);
             pcbuffered.push_front(this);
         }
@@ -73,10 +83,11 @@ public:
     {
         if (pbuffered.size() > 8) {
             auto& last_db = *pbuffered.back();
-            assert(last_db.buf.size() != 0);
+            Ensures(last_db.buf.size() != 0);
             string d = lexical_cast<string>(last_db.buf);
             last_db.coder = Coder::create(d);
-            last_db.data = coder->encode(d);
+            coder->encode(d);
+            last_db.data = move(d);
             last_db.buf.clear();
             last_db.buf.shrink_to_fit(); 
         }
@@ -181,7 +192,7 @@ bool LexiconImpl::insert(Record record)
         it = ub == m_dict.end() ? --m_dict.end() : ub;
 
         success = it->second.insert(move(record));
-        assert(success);
+        Ensures(success);
 
         auto nh = m_dict.extract(it);
         nh.key().min = move(range.min);
