@@ -33,22 +33,21 @@ void test_inputmethod()
     //cout << InputMethod::valid_pinyin_dict << endl;
     //cout << InputMethod::valid_pinyin_tokens << endl;
     InputMethod im;
-    cin.get();
     {
         TimeIt it("input 1 character");
         cout << im.on_input('n') << endl;
         //cout << im.get_candidates() << endl;
     }
-    {
-        TimeIt it("input 2 character");
-        cout << im.on_input('h') << endl;
-        //cout << im.get_candidates() << endl;
-    }
-    {
-        TimeIt it("input 3 character");
-        cout << im.on_input('s') << endl;
-        //cout << im.get_candidates() << endl;
-    }
+    //{
+    //    TimeIt it("input 2 character");
+    //    cout << im.on_input('h') << endl;
+    //    //cout << im.get_candidates() << endl;
+    //}
+    //{
+    //    TimeIt it("input 3 character");
+    //    cout << im.on_input('s') << endl;
+    //    //cout << im.get_candidates() << endl;
+    //}
     //{
     //    TimeIt it("input 4 character");
     //    cout << im.on_input('j') << endl;
@@ -78,22 +77,14 @@ void test_lexicon()
     //for (auto& x : v)
         //cout << x << endl;
     {
-        TimeIt it("use init_lexicon");
-        auto lexicon = Lexicon::create();
-        DataLoader dataloader;
-        lexicon->init_lexicon(dataloader.read_data());
-        //lexicon.show_map_node();
-    }
-    {
         TimeIt it("use insert");
         auto lexicon = Lexicon::create();
         DataLoader dataloader;
-        auto vec = lexical_cast<vector<Record>>(dataloader.read_data());
-        for (int i = 0; i < vec.size(); ++i) {
-            lexicon->insert(vec[i]);
-        }
+        stringstream ss(dataloader.read_data());
+        for (Record r; ss >> r;)
+          lexicon->insert(move(r));
+        lexicon->show_map_node();
     }
-
 }
 
 void test_coder()
@@ -127,8 +118,8 @@ void test_dataloader()
 
 int main()
 {
-    test_inputmethod();
-    //test_lexicon();
+    //test_inputmethod();
+    test_lexicon();
     //test_coder();
     //test_dataloader();
     TimeIt::show();

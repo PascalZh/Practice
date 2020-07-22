@@ -6,7 +6,7 @@ InputMethod::InputMethod() : m_dl(make_unique<DataLoader>()), m_lex(Lexicon::cre
     m_mode(Mode::Normal)
 {
     string data = m_dl->read_data();
-    m_lex->init_lexicon(data);
+    //m_lex->init_lexicon(data);
 }
 
 void InputMethod::set_candidates()
@@ -78,7 +78,7 @@ bool InputMethod::choose_the_candidate(size_t idx)
     if (not idx < m_candidates.size())
         return false;
     auto& cand = m_candidates[idx];
-    m_lex->set_freq(cand.pinyin, cand.word, [](int x) { return x + 1; });
+    //m_lex->set_freq(cand.pinyin, cand.word, [](int x) { return x + 1; });
     return true;
 }
 
