@@ -34,7 +34,7 @@ try:
             code = event.code
             key = ecodes.KEY[event.code]
             # print(f"value: \033[31m{value}\033[0m\t"
-                  # f"code: \033[32m{code}\033[0m\tkey: \033[33m{key}\033[0m")
+            #       f"code: \033[32m{code}\033[0m\tkey: \033[33m{key}\033[0m")
 
             i += 1
             data.append([value, code, key, (value << 15) | code])

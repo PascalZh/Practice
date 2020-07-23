@@ -61,11 +61,11 @@ struct Record {
 class Lexicon
 {
 public:
-    virtual bool           insert(Record e) = 0;
-    virtual bool           erase(const string& pinyin, const string& word) = 0;
+    virtual bool insert(const Record& e) = 0;
+    virtual bool erase(const string& pinyin, const string& word) = 0;
     virtual vector<std::reference_wrapper<Record>> find_all(const string& pinyin) = 0;
 
-    virtual void           show_map_node() const = 0;
+    virtual void show_map_node() const = 0;
 
     static unique_ptr<Lexicon> create();
 

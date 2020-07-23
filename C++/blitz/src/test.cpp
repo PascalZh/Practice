@@ -80,6 +80,7 @@ void test_lexicon()
         TimeIt it("use insert");
         auto lexicon = Lexicon::create();
         DataLoader dataloader;
+        //auto vec = lexical_cast<vector<Record>>(dataloader.read_data());
         stringstream ss(dataloader.read_data());
         for (Record r; ss >> r;)
           lexicon->insert(move(r));
