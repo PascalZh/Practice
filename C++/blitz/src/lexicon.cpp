@@ -13,10 +13,10 @@ private:
 public:
   bool insert(const Record& e);
   bool erase(const string& pinyin, const string& word) { return true; }
-  vector<std::reference_wrapper<Record>> find_all(const string& pinyin);
+  vector<Record*> find_all(const string& pinyin);
 
   // some auxiliary functions for debug
-  void show_map_node() const;
+  void check_data() const;
 };
 
 //┌───────────────────────────────────────────────────────────────────────────┐
@@ -91,27 +91,27 @@ bool LexiconImpl::insert(const Record& record)
   }
 }
 
-vector<std::reference_wrapper<Record>> LexiconImpl::find_all(const string& pinyin)
+vector<Record*> LexiconImpl::find_all(const string& pinyin)
 {
-  // see struct PYRange, two ranges are equivalent if they intersect.
-  vector<std::reference_wrapper<Record>> result;
+  vector<Record*> result;
   auto it_block = std::lower_bound(m_data.begin(), m_data.end(), pinyin,
-      [](const string& pinyin, const Block& block) {
-      return pinyin < block.front().pinyin;
+      [](const Block& block, const string& pinyin) {
+      return block.back().pinyin < pinyin;
       });
+  if (it_block == m_data.end())
+    return result;
+
   auto it = std::lower_bound(it_block->begin(), it_block->end(), pinyin,
-      [](const string& pinyin, const Record& record) {
-      return pinyin < record.pinyin;
-      });
+      [](const Record& record, const string& pinyin)
+      { return record.pinyin < pinyin; });
+  Ensures(it != it_block->end());
   while (it_block != m_data.end()) {
-    while (it != it_block->end() and is_substr_of(pinyin, it->pinyin)) {
-      result.push_back(std::ref(*it));
-      ++it;
-    }
+    for (; it != it_block->end() and it->pinyin.starts_with(pinyin); ++it)
+      result.push_back(&(*it));
+
     if (it == it_block->end()) {
       ++it_block;
       it = it_block == m_data.end() ? it : it_block->begin();
-      continue;
     } else {
       break;
     }
@@ -120,7 +120,7 @@ vector<std::reference_wrapper<Record>> LexiconImpl::find_all(const string& pinyi
   return result;
 }
 
-void LexiconImpl::show_map_node() const
+void LexiconImpl::check_data() const
 {
 }
 
