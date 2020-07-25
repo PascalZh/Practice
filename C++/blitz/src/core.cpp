@@ -42,16 +42,13 @@ const vector<Record> InputMethod::get_candidates() const
 
 void InputMethod::set_candidates_normal()
 {
-  this->tokenize();
-
-  auto cartesian_product =
-    [](const vector<string>& lhs, const vector<string>& rhs)
+  auto append_token =
+    [](const vector<string>& lhs, const string& token)
     -> const vector<string>
   {
-      if (lhs.empty()) return rhs; if (rhs.empty()) return lhs;
-
       vector<string> ret;
-      for (auto& l : lhs) for (auto& r : rhs) ret.emplace_back(l + "'" + r);
+      for (auto& l : lhs)
+        ret.emplace_back(l + "'" + token);
       return ret;
   };
 
@@ -67,22 +64,17 @@ void InputMethod::set_candidates_normal()
         std::copy(candidates.begin(), candidates.end(), back_inserter(m_candidates));
 
       } else {
-        m_candidates.erase(
-            std::remove_if(
-              m_candidates.begin(),
-              m_candidates.end(),
-              [&pp](const Record* r)
-              {
-                return std::all_of(
-                    pp.begin(),
-                    pp.end(),
-                    [&r](const string& pinyin)
-                    { return not r->pinyin.starts_with(pinyin); }
-                    );
-              }
-              ),
-            m_candidates.end()
-            );
+        vector<Record*> new_candidates;
+        for (auto r : m_candidates) {
+          if (
+              std::count(r->pinyin.begin(), r->pinyin.end(), '\'') + 1 >= m_tokens.size() and
+              std::any_of(pp.begin(), pp.end(),
+                [&r](const string& pinyin)
+                { return r->pinyin.starts_with(pinyin); })
+              )
+            new_candidates.push_back(r);
+        }
+        m_candidates = move(new_candidates);
       }
 
       m_pp.clear();
@@ -90,15 +82,17 @@ void InputMethod::set_candidates_normal()
         m_pp.push_back(record->pinyin);
     };
 
+  this->tokenize();
+
+  Expects(m_tokens.size() > 0);
   if (m_tokens.size() == 1) {
     // TODO set candidates when there is only one token.
   } else if (m_tokens.size() == 2) {
-    m_pp = cartesian_product(
-        syllable_map.at(m_tokens[0]), syllable_map.at(m_tokens[1]));
+    m_pp = append_token(syllable_map.at(m_tokens[0]), m_tokens[1]);
     find_candidates(m_pp);
 
   } else {
-    find_candidates(cartesian_product(m_pp, vector<string>(1, m_tokens.back())));
+    find_candidates(append_token(m_pp, m_tokens.back()));
   }
 }
 
