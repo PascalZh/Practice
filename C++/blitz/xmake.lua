@@ -9,3 +9,16 @@ target("test")
     if is_mode("release") then
         add_defines("NDEBUG")
     end
+
+target("blitz")
+    set_kind("shared")
+    set_filename("blitz.so")
+    add_files("src/*.cpp")
+    add_files("src/lua/lua_wrapper.cpp")
+    add_cxxflags("-std=c++20")
+    add_links("lua5.1")
+    add_includedirs("/usr/include/lua5.1")
+    add_includedirs("src")
+    if is_mode("release") then
+        add_defines("NDEBUG")
+    end

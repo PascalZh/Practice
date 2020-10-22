@@ -22,8 +22,8 @@ using namespace std;
 class InputMethodBase
 {
 public:
-    virtual bool on_input(char ch) = 0;
-    virtual bool choose_the_candidate(size_t idx) = 0;
+    virtual void on_input(char ch) = 0;
+    virtual bool choose_candidate(size_t idx) = 0;
 };
 
 class InputMethod : InputMethodBase
@@ -35,26 +35,12 @@ public:
     // -> sort_candidates
     // -> get_candidates
     // -> choose_the_candidate or other.
-    bool on_input(char ch)
-    {
-        if (!check_input(ch))
-            return false;
-        m_input_seq.push_back(ch);
-        set_candidates();
-        return true;
-    }
-    bool on_input(string seq)
-    {
-        if (!all_of(seq.begin(), seq.end(), check_input))
-            return false;
-        m_input_seq += seq;
-        set_candidates();
-        return true;
-    }
+    static bool check_input(char ch) { return 'a' <= ch and ch <= 'z'; }
+    void on_input(char ch) { m_input_seq.push_back(ch); set_candidates(); }
+    void on_input(string seq) { m_input_seq += seq; set_candidates(); }
     void sort_candidates();
     const vector<Record> get_candidates() const;
-
-    bool choose_the_candidate(size_t idx);
+    bool choose_candidate(size_t idx);
 
 private:
     enum class Mode {Normal};
@@ -66,13 +52,12 @@ private:
     string m_input_seq;
     vector<string> m_tokens;
     vector<Record*> m_candidates;
+    vector<Record*> m_pc; // possible candidates;
     vector<string> m_pp; // possible pinyin
 
     void set_candidates();
     void tokenize();
     void set_candidates_normal();
-
-    static bool check_input(char ch) { return 'a' <= ch and ch <= 'z'; }
 
     static const map<string, vector<string>> init_syllable_map();
     static const vector<string> init_valid_token();

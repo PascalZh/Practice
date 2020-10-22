@@ -193,3 +193,4 @@ size_t calc_memory_usage(const Map auto& m)
 
 #define Expects(...) assert((__VA_ARGS__))
 #define Ensures(...) assert((__VA_ARGS__))
+

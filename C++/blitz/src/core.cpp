@@ -23,7 +23,7 @@ void InputMethod::set_candidates()
 
 void InputMethod::sort_candidates()
 {
-  std::sort(m_candidates.begin(), m_candidates.end(),
+  std::sort(m_pc.begin(), m_pc.end(),
       [](const Record* lhs, const Record* rhs)
       { return lhs->freq < rhs->freq; } );
 }
@@ -34,16 +34,16 @@ const vector<Record> InputMethod::get_candidates() const
   result.reserve(m_candidates.size());
   for (auto& v : m_candidates) {
     if (std::count(v->pinyin.begin(), v->pinyin.end(), '\'') + 1
-        == m_tokens.size())
+        == m_tokens.size()) {
       result.push_back(*v);
+    }
   }
   return result;
 }
 
 void InputMethod::set_candidates_normal()
 {
-  auto append_token =
-    [](const vector<string>& lhs, const string& token)
+  auto append_token = [](const vector<string>& lhs, const string& token)
     -> const vector<string>
   {
       vector<string> ret;
@@ -52,45 +52,47 @@ void InputMethod::set_candidates_normal()
       return ret;
   };
 
-  auto find_candidates =
-    [this](const vector<string>& pp)
-    {
-      if (m_candidates.empty()) {
-        set<Record*> candidates;
-        for (auto& pinyin : pp) {
-          auto cand = m_lex->find_all(pinyin);
-          candidates.insert(cand.begin(), cand.end());
-        }
-        std::copy(candidates.begin(), candidates.end(), back_inserter(m_candidates));
-
-      } else {
-        vector<Record*> new_candidates;
-        for (auto r : m_candidates) {
-          if (
-              std::count(r->pinyin.begin(), r->pinyin.end(), '\'') + 1 >= m_tokens.size() and
-              std::any_of(pp.begin(), pp.end(),
-                [&r](const string& pinyin)
-                { return r->pinyin.starts_with(pinyin); })
-              )
-            new_candidates.push_back(r);
-        }
-        m_candidates = move(new_candidates);
+  auto find_candidates = [this](const vector<string>& pp)
+  {
+    if (m_pc.empty()) {
+      set<Record*> candidates;
+      for (auto& pinyin : pp) {
+        auto cand = m_lex->find_all(pinyin);
+        candidates.insert(cand.begin(), cand.end());
       }
+      std::copy(candidates.begin(), candidates.end(), back_inserter(m_pc));
 
-      m_pp.clear();
-      for (auto record : m_candidates) 
-        m_pp.push_back(record->pinyin);
-    };
+    } else {
+      vector<Record*> new_candidates;
+      for (auto r : m_pc) {
+        if (
+            std::count(r->pinyin.begin(), r->pinyin.end(), '\'') + 1 >= m_tokens.size() and
+            std::any_of(pp.begin(), pp.end(),
+              [&r](const string& pinyin)
+              { return r->pinyin.starts_with(pinyin); })
+           )
+          new_candidates.push_back(r);
+      }
+      m_pc = move(new_candidates);
+    }
+
+    for (auto& v : m_pc) {
+      if (std::count(v->pinyin.begin(), v->pinyin.end(), '\'') + 1
+          == m_tokens.size()) {
+        m_candidates.push_back(v);
+      }
+    }
+
+    m_pp.clear();
+    for (auto record : m_pc) 
+      m_pp.push_back(record->pinyin);
+  };
 
   this->tokenize();
 
-  Expects(m_tokens.size() > 0);
   if (m_tokens.size() == 1) {
     // TODO set candidates when there is only one token.
-  } else if (m_tokens.size() == 2) {
-    m_pp = append_token(syllable_map.at(m_tokens[0]), m_tokens[1]);
-    find_candidates(m_pp);
-
+    m_pp = syllable_map.at(m_tokens[0]);
   } else {
     find_candidates(append_token(m_pp, m_tokens.back()));
   }
@@ -112,12 +114,11 @@ void InputMethod::tokenize()
     m_tokens.push_back(new_ch);
 }
 
-bool InputMethod::choose_the_candidate(size_t idx)
+bool InputMethod::choose_candidate(size_t idx)
 {
-  if (not idx < m_candidates.size())
+  if (not idx < m_pc.size())
     return false;
-  //auto& cand = m_candidates[idx];
-  //m_lex->set_freq(cand.pinyin, cand.word, [](int x) { return x + 1; });
+  ++(m_candidates[idx]->freq);
   return true;
 }
 
