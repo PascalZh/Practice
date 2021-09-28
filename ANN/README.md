@@ -1,14 +1,17 @@
 # Artificial Neural Network
 This created for practicing something about ANN.
 
-## Table of Contents
+- [Artificial Neural Network](#artificial-neural-network)
+  - [A simple bp network algorithm by Racket](#a-simple-bp-network-algorithm-by-racket)
+    - [Training Analysis](#training-analysis)
+      - [Step 1: nr1.log nr2.log](#step-1-nr1log-nr2log)
+      - [Step 2: all kinds of trial...](#step-2-all-kinds-of-trial)
+      - [Step 3: apply inertia (a0.0.log ~ a1.0.log)](#step-3-apply-inertia-a00log--a10log)
+      - [Step 4: train the network with huge size dataset (1.log, 2.log)](#step-4-train-the-network-with-huge-size-dataset-1log-2log)
+      - [Step 5: **BGD** instead of **SGD**](#step-5-bgd-instead-of-sgd)
+    - [Summary](#summary)
+    - [TODO](#todo)
 
-[**BP Neural Network with Racket**`bp_nn/`](#a-simple-bp-network-algorithm-by-racket)
-* [Training Analysis](#bp-ntw-racket-analysis)
-* [Summary](#bp-ntw-racket-summary)
-* [TODO](#bp-ntw-racket-todo)
-
-<a name="bp-ntw-racket"></a>
 ## A simple bp network algorithm by Racket
 
 > This project has very bad codes, and will not be maintained or updated.
@@ -21,7 +24,6 @@ A node is referred to a list of weight that connects to a neural node.
 A layer is a list of list, contains all nodes of that layer.
 A w is a weight, determined by two nodes.
 
-<a name="bp-ntw-racket-analysis"></a>
 ### Training Analysis
 #### Step 1: nr1.log nr2.log
 *nr1.log* is the log file of *number_recognition_by_bp.rkt* of first try.

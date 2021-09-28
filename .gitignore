@@ -1,9 +1,9 @@
-build/
-__pycache__/
-compiled/
-db/
-tmp/
-.xmake/
+build
+__pycache__
+compiled
+db
+tmp
+.xmake
 
 *.exe
 *.out
@@ -18,8 +18,6 @@ tmp/
 !/C51/whut_homeworks/LED/*.c
 !/C51/whut_homeworks/LED/*.png
 
-foo/
-bar/
 foo
 bar
 foo.*

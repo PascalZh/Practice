@@ -5,36 +5,45 @@ reg key;
 wire led;
 
 reg clk;
+reg en;
+reg clr;
 reg rst;
 wire [3:0] cnt_value;
 
-LED led_m(
-        .key(key),
-        .led(led)
-    );
+// LED led_m(
+//         .key(key),
+//         .led(led)
+//     );
 
-Counter counter_m(
-            .clk(clk),
-            .rst(rst),
-            .cnt_value(cnt_value)
-        );
+// Counter counter_m(
+//             .clk(clk),
+//             .rst(rst),
+//             .cnt_value(cnt_value)
+//         );
+
+CounterWithClr cnt(
+                   .clk(clk),
+                   .en(en),
+                   .clr(clr),
+                   .cnt_value(cnt_value)
+               );
 
 initial clk = 0;
 always #50 clk = ~clk;
 
 initial begin
-    key = 1;
-    #200;
-    key = 0;
-    #200;
-    key = 1;
-    #200;
-
-    rst = 0;
-    #200
-     rst = 1;
-    #2000
-     $stop;
+    clr = 0;
+    en = 1;
+    #400;
+    clr = 1;
+    #50;
+    clr = 0;
+    #400;
+    en = 0;
+    #100;
+    en = 1;
+    #100;
+    $stop;
 end
 
 endmodule
