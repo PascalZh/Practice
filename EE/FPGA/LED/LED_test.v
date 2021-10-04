@@ -34,11 +34,11 @@ always #50 clk = ~clk;
 initial begin
     clr = 0;
     en = 1;
-    #400;
+    #500;
     clr = 1;
     #50;
     clr = 0;
-    #400;
+    #500;
     en = 0;
     #100;
     en = 1;
