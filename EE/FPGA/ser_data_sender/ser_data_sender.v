@@ -1,3 +1,5 @@
+// 模块说明
+// 功能：将并行的数据data通过tx串行输出、每输出一个数据tx_done会输出一个脉冲
 module ser_data_sender(
     input [7:0] data,
     input rst_n,
