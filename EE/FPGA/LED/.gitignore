@@ -1,6 +1,10 @@
-/*
-!.gitignore
+db/
+incremental_db/
+output_files/
+simulation/
+*tmp/
+.qsys_edit/
 
-!*.v
-!*.qpf
-!*.qsf
+*.bak
+*.rpt
+*.qws
