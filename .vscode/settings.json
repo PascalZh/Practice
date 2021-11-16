@@ -1,7 +1,13 @@
 {
   "cSpell.words": [
+    "endcase",
     "endmodule",
+    "endtask",
+    "ifndef",
+    "Leds",
+    "localparam",
     "negedge",
-    "posedge"
+    "posedge",
+    "urandom"
   ]
 }

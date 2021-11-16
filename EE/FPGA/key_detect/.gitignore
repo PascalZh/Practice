@@ -1,9 +1,11 @@
 db/
 incremental_db/
-output_files/
+output_files/*
 simulation/
 *tmp/
 
 *.bak
 *.rpt
 *.qws
+
+!output_files/stp2.stp

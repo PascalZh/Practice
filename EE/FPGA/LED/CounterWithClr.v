@@ -13,7 +13,7 @@ always @(posedge clk, posedge clr)
     if (clr)
         cnt <= 4'b0;
     else if (en)
-        cnt <= cnt + 4'b1;
+        cnt <= cnt + 1;
 
 assign cnt_value = cnt;
 

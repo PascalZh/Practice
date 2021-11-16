@@ -3,7 +3,7 @@ module LED (
     input rst,
     output reg led,
     output reg beep
-  );
+);
 
   reg [24-1:0] cnt;
 
@@ -12,26 +12,27 @@ module LED (
   // end
 
   always @(posedge clk, negedge rst) begin
-    if (!rst)
-      cnt <= 24'd0;
-    else if (cnt == 15_249_999)
-      cnt <= 24'd0;
-    else
-      cnt <= cnt + 24'b1;
+    if (!rst) begin
+      cnt <= 0;
+    end else if (cnt == 15_249_999) begin
+      cnt <= 0;
+    end else begin
+      cnt <= cnt + 1;
+    end
   end
 
   // 控制LED循环闪动
   always @(posedge clk, negedge rst) begin
     if (!rst) begin
-      led <= 1'd1;
-      beep <= 1'd0;
+      led  <= 1;
+      beep <= 0;
     end else if (cnt == 15_249_999) begin
       led <= ~led;
     end
 
-    if (cnt % 10000 == 0) begin
-      beep <= ~beep;
-    end
+    // if (cnt % 10000 == 0) begin
+    //   beep <= ~beep;
+    // end
   end
 
 endmodule
