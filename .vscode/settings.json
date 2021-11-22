@@ -8,6 +8,7 @@
     "localparam",
     "negedge",
     "posedge",
+    "sclk",
     "urandom"
   ]
 }

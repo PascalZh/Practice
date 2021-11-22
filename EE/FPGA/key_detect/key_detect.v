@@ -12,18 +12,18 @@ module key_detect (
   reg [19:0] cnt;
   reg en_cnt, cnt_full;
 
-  reg key_sync1;
-  reg key_sync2;
-  reg key_synced_pre;
-  reg key_synced;
-  always @(posedge clk) key_sync1 <= key_n;
-  always @(posedge clk) key_sync2 <= key_sync1;
-  always @(posedge clk) key_synced <= key_sync2;
-  always @(posedge clk) key_synced_pre <= key_synced;
+  reg key_nq1;
+  reg key_nq2;
+  reg key_nq3;
+  reg key_nq4;
+  always @(posedge clk) key_nq1 <= key_n;
+  always @(posedge clk) key_nq2 <= key_nq1;
+  always @(posedge clk) key_nq3 <= key_nq2;
+  always @(posedge clk) key_nq4 <= key_nq3;
 
   wire p_edge, n_edge;
-  assign p_edge = !key_synced_pre && key_synced;
-  assign n_edge = key_synced_pre && !key_synced;
+  assign p_edge = !key_nq4 && key_nq3;
+  assign n_edge = key_nq4 && !key_nq3;
 
   always @(posedge clk, negedge rst_n) begin
     if (!rst_n) begin
