@@ -1,5 +1,7 @@
 {
   "cSpell.words": [
+    "CMAKE",
+    "dout",
     "endcase",
     "endmodule",
     "endtask",
@@ -8,7 +10,12 @@
     "localparam",
     "negedge",
     "posedge",
+    "Quartus",
+    "rdreq",
     "sclk",
-    "urandom"
+    "uart",
+    "urandom",
+    "usedw",
+    "wrreq"
   ]
 }

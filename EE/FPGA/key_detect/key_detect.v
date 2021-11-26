@@ -84,7 +84,7 @@ module key_detect (
       cnt <= 0;
       cnt_full <= 0;
     end else if (en_cnt) begin
-      cnt <= cnt + 1;
+      cnt <= cnt + 20'd1;
       if (cnt == 20'd100_000 - 2) cnt_full <= 1;
     end else begin
       cnt <= 0;
