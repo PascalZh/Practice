@@ -6,8 +6,8 @@ module key_detect (
     output reg press_up
 );
 
-  reg [1:0] state;
-  localparam Idle = 2'b00, WaitDown = 2'b01, Down = 2'b10, WaitUp = 2'b11;
+  localparam unsigned Idle = 2'b00, WaitDown = 2'b01, Down = 2'b10, WaitUp = 2'b11;
+  reg [ 1:0] state;
 
   reg [19:0] cnt;
   reg en_cnt, cnt_full;
@@ -28,52 +28,52 @@ module key_detect (
   always @(posedge clk, negedge rst_n) begin
     if (!rst_n) begin
       state <= Idle;
-      en_cnt <= 0;
-      press_down <= 0;
-      press_up <= 0;
+      en_cnt <= 1'b0;
+      press_down <= 1'b0;
+      press_up <= 1'b0;
     end else begin
-      press_up   <= 0;
-      press_down <= 0;
+      press_up   <= 1'b0;
+      press_down <= 1'b0;
       case (state)
         Idle: begin
           if (n_edge) begin
             state  <= WaitDown;
-            en_cnt <= 1;
+            en_cnt <= 1'b1;
           end
         end
         WaitDown: begin
           if (p_edge) begin
             state  <= Idle;
-            en_cnt <= 0;
+            en_cnt <= 1'b0;
           end else if (cnt_full) begin
             state <= Down;
-            en_cnt <= 0;
+            en_cnt <= 1'b0;
             // key is pressed down
-            press_down <= 1;
+            press_down <= 1'b1;
           end
         end
         Down: begin
           if (p_edge) begin
             state  <= WaitUp;
-            en_cnt <= 1;
+            en_cnt <= 1'b1;
           end
         end
         WaitUp: begin
           if (n_edge) begin
             state  <= Down;
-            en_cnt <= 0;
+            en_cnt <= 1'b0;
           end else if (cnt_full) begin
             state <= Idle;
-            en_cnt <= 0;
+            en_cnt <= 1'b0;
             // key is correctly detected here
-            press_up <= 1;
+            press_up <= 1'b1;
           end
         end
         default: begin
           state <= Idle;
-          en_cnt <= 0;
-          press_down <= 0;
-          press_up <= 0;
+          en_cnt <= 1'b0;
+          press_down <= 1'b0;
+          press_up <= 1'b0;
         end
       endcase
     end
@@ -81,14 +81,14 @@ module key_detect (
 
   always @(posedge clk, negedge rst_n) begin
     if (!rst_n) begin
-      cnt <= 0;
-      cnt_full <= 0;
+      cnt <= 1'b0;
+      cnt_full <= 1'b0;
     end else if (en_cnt) begin
       cnt <= cnt + 20'd1;
-      if (cnt == 20'd100_000 - 2) cnt_full <= 1;
+      if (cnt == 20'd100_000 - 20'd2) cnt_full <= 1'b1;
     end else begin
-      cnt <= 0;
-      cnt_full <= 0;
+      cnt <= 1'b0;
+      cnt_full <= 1'b0;
     end
   end
 

@@ -57,11 +57,11 @@ module adc_adc128s022_tb;
       end
     end
 
-    #(20*ClkPeriod);
+    #(20 * ClkPeriod);
     receiving_stop = 1;
     #(ClkPeriod) receiving_stop = 0;
 
-    #(100*ClkPeriod);
+    #(100 * ClkPeriod);
     $stop;
   end
 

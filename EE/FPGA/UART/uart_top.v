@@ -26,8 +26,7 @@ module uart_top (
       .clk(clk),
       .set_baud(3'h0),
       .tx(tx),
-      .tx_done(tx_done),
-      .uart_state()
+      .tx_done(tx_done)
   );
 
   issp u0 (
@@ -43,7 +42,7 @@ module uart_top (
       en_send <= 0;
     end
   end
-  
+
   always @(posedge clk, negedge rst_n) begin
     if (!rst_n) begin
       key_state <= 0;

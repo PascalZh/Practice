@@ -3,7 +3,7 @@ module uart_byte_tx_tb;
 reg [7:0] data_byte;
 reg rst_n, en, clk;
 reg [2:0] set_baud;
-wire tx, tx_done, uart_state;
+wire tx, tx_done;
 
 uart_byte_tx uart_byte_tx(
     .data_byte(data_byte),
@@ -12,8 +12,7 @@ uart_byte_tx uart_byte_tx(
     .clk(clk),
     .set_baud(set_baud),
     .tx(tx),
-    .tx_done(tx_done),
-    .uart_state(uart_state)  // 1表示正在传输
+    .tx_done(tx_done)
 );
 
 initial clk = 1;
