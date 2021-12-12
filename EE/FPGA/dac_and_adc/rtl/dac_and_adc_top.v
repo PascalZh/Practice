@@ -1,14 +1,18 @@
 module dac_and_adc_top (
     input clk,
     input rst_n,
-    input start_all,
 
-    output tx,
+    output tx,  //! uart tx
+
     output adc_cs_n,
     output adc_sclk,
     output adc_din,
     input adc_dout,
-    input [2:0] adc_addr
+
+    input key_n,  //! press key to start dac
+    output dac_cs_n,
+    output dac_din,
+    output dac_sclk
 );
 
   wire tx_done;
@@ -20,6 +24,8 @@ module dac_and_adc_top (
   wire uart_en_send;
   wire adc_receiving_start;
   wire adc_receiving_done;
+  reg [2:0] adc_addr = 3'b0;
+  wire start_all;
 
   ctrl_fifo2uart ctrl_fifo2uart_dut (
       .clk(clk),
@@ -72,5 +78,21 @@ module dac_and_adc_top (
       .adc_dout(adc_dout)
   );
 
+  test_dac_tlv5618 test_dac_tlv5618_dut (
+      .clk(clk),
+      .rst_n(rst_n),
+      .key_n(key_n),
+      .dac_cs_n(dac_cs_n),
+      .dac_din(dac_din),
+      .dac_sclk(dac_sclk)
+  );
+
+  key_detect key_detect_dut (
+      .key_n(key_n),
+      .clk(clk),
+      .rst_n(rst_n),
+      .press_down(),
+      .press_up(start_all)
+  );
 
 endmodule

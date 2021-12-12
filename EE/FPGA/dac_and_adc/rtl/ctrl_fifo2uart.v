@@ -19,6 +19,7 @@ module ctrl_fifo2uart (
   localparam unsigned Idle = 2'b00, Receiving = 2'b01, Sending = 2'b11;
   reg [1:0] state;
   reg sel_fifo_data;
+  reg start;
 
   //! driving sel_fifo_data, mux of uart_data
   always @(posedge clk, negedge rst_n) begin
@@ -61,7 +62,7 @@ module ctrl_fifo2uart (
   always @(posedge clk, negedge rst_n) begin
     if (!rst_n) begin
       adc_receiving_start <= 1'b0;
-    end else if (start_all) begin
+    end else if (start_all || start) begin
       adc_receiving_start <= 1'b1;
     end else if (state == Receiving && adc_receiving_done == 1'b1) begin
       adc_receiving_start <= 1'b1;
@@ -74,18 +75,28 @@ module ctrl_fifo2uart (
   always @(posedge clk, negedge rst_n) begin
     if (!rst_n) begin
       state <= Idle;
+      start <= 1'b0;
     end else begin
       case (state)
         Idle: begin
           if (start_all) state <= Receiving;
         end
         Receiving: begin
+          start <= 1'b0;
+          // fifo full is triggered after receiving_done, so fifo will be (full - 1) words here
           if (adc_receiving_done && fifo_almost_full) state <= Sending;
         end
         Sending: begin
-          if (uart_tx_done && fifo_almost_empty) state <= Receiving;
+          // fifo empty is triggered after uart_tx_done, so fifo will be 1 words remaining in this situation
+          if (uart_tx_done && fifo_almost_empty) begin
+            start <= 1'b1;
+            state <= Receiving;
+          end
         end
-        default: state <= Idle;
+        default: begin
+          start <= 1'b0;
+          state <= Idle;
+        end
       endcase
     end
   end

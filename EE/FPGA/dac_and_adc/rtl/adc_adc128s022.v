@@ -1,6 +1,6 @@
 module adc_adc128s022 #(
     //! divide frequency ratio, maximum value is limited by `div_cnt`
-    parameter unsigned DivCntParam = 4
+    parameter unsigned DivCntMax = 8
 ) (
     input clk,
     input rst_n,
@@ -17,7 +17,7 @@ module adc_adc128s022 #(
 );
 
   reg en;
-  reg [1:0] div_cnt;
+  reg [2:0] div_cnt;
   reg [5:0] receiving_seq_cnt;
   reg [2:0] addr_q;
 
@@ -42,7 +42,7 @@ module adc_adc128s022 #(
   always @(posedge clk, negedge rst_n) begin
     if (!rst_n) div_cnt <= 1'b0;
     else if (en)
-      if (div_cnt == DivCntParam - 1) div_cnt <= 2'b0;
+      if (div_cnt == DivCntMax - 1) div_cnt <= 2'b0;
       else div_cnt <= div_cnt + 1'b1;
     else div_cnt <= 2'b0;
   end
@@ -50,7 +50,7 @@ module adc_adc128s022 #(
   always @(posedge clk, negedge rst_n) begin
     if (!rst_n) receiving_seq_cnt <= 1'b0;
     else if (en)
-      if (div_cnt == DivCntParam - 1)
+      if (div_cnt == DivCntMax - 1)
         if (receiving_seq_cnt == 31) receiving_seq_cnt <= 1'b0;
         else receiving_seq_cnt <= receiving_seq_cnt + 1'b1;
       else receiving_seq_cnt <= receiving_seq_cnt;
@@ -63,7 +63,7 @@ module adc_adc128s022 #(
       adc_sclk <= 1'b1;  // ensure that before receiving_seq_cnt == 0, `adc_sclk` is 1
       data <= 12'b0;
       receiving_done <= 1'b0;
-    end else if (en && div_cnt == DivCntParam - 1) begin
+    end else if (en && div_cnt == DivCntMax - 1) begin
       case (receiving_seq_cnt)
         0: adc_sclk <= 1'b0;
         2, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30: adc_sclk <= 1'b0;
