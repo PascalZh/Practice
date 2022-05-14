@@ -4,9 +4,11 @@ interface mem_if(input bit clk);
   logic start, write;
   logic [7:0] addr;
   logic [15:0] data;
+  logic [15:0] dout;
 
   clocking cb @(posedge clk);
     output write, start, addr, data;
+    input dout;
   endclocking
 
   modport TEST(clocking cb);
@@ -29,19 +31,23 @@ program automatic test_memory (
     end
     
     repeat(10) @(memif.cb);
-    $finish;
   end
 
 endprogram
 
 module top;
 
+
   bit clk = 1;
   always #5 clk = ~clk;
 
   mem_if memif(clk);
  
-  memory mem_0(.start(memif.start), .write(memif.write), .addr(memif.addr), .data(memif.data));
+  memory mem_0(.start(memif.start), .write(memif.write), .addr(memif.addr), .data(memif.data), .dout(memif.dout));
   test_memory test_memory_0(.*);
+
+  initial begin
+    $monitor("memif.start: %b", memif.start);
+  end
 
 endmodule
