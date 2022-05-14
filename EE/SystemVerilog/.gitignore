@@ -1,0 +1,12 @@
+/*/*
+!/ip_repo/*
+!/*/rtl/
+!/*/docs/
+!/*/scripts/
+!/*/xdc/
+!/*/testbenches/
+!/*/include/
+!/*/Makefile
+!/*/README.md
+
+!/**/.gitignore
